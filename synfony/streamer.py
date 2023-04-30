@@ -19,15 +19,19 @@ class Streamer(ABC):
         pass
 
     @abstractmethod
-    def get_current_time(self):
+    def get_current_time(self, channel_id):
         pass
 
     @abstractmethod
-    def get_total_time(self):
+    def get_title(self, channel_id):
         pass
 
     @abstractmethod
-    def is_playing(self):
+    def get_total_time(self, channel_id):
+        pass
+
+    @abstractmethod
+    def is_playing(self, channel_id):
         pass
 
     @abstractmethod
@@ -79,6 +83,9 @@ class LocalMusicStreamer(Streamer):
         intra_chunk_offset = self.current_chunk_timestamp[channel_id]
         realtime_offset = datetime.now() - self.current_chunk_realtime[channel_id]
         return inter_chunk_offset + intra_chunk_offset + realtime_offset.total_seconds()
+
+    def get_title(self, channel_id):
+        return Config.CHANNELS[channel_id][0]
 
     def get_total_time(self, channel_id):
         return Config.CHANNELS[channel_id][1] * Config.CHANNELS[channel_id][2]

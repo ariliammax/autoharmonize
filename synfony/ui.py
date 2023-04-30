@@ -158,7 +158,8 @@ def initUI():
     streamer = LocalMusicStreamer()
     streamer.init()
 
-    songTitleSurface = pygame.font.SysFont('Arial', 40).render("song.mp3", True, (255, 255, 255))
+    title = streamer.get_title(0)
+    songTitleSurface = pygame.font.SysFont('Arial', 40).render(title, True, (255, 255, 255))
     songTitleRect = songTitleSurface.get_rect()
     songTitleRect.x = (UIConfig.SCREEN_WIDTH / 2) - (songTitleRect.width / 2)
     songTitleRect.y = 0
