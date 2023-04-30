@@ -1,8 +1,8 @@
 # serialization.py
-# in synfony.common
+# in synfony
 
-from synfony.common.config import Config
 from math import log
+from synfony.config import Config
 from typing import Callable, Optional
 
 

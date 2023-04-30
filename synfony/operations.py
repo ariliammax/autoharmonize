@@ -1,5 +1,5 @@
 # operations.py
-# in chat.common
+# in synfony
 
 from enum import Enum
 

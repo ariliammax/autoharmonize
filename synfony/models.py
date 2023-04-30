@@ -1,9 +1,9 @@
 # models.py
-# in synfony.common
+# in synfony
 
-from synfony.common.operations import Opcode
-from synfony.common.serialization import SerializationUtils
-from synfony.common.util import Model
+from synfony.operations import Opcode
+from synfony.serialization import SerializationUtils
+from synfony.util import Model
 from typing import Callable, Dict, List
 
 # DATA MODELS

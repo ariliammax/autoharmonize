@@ -1,11 +1,11 @@
 # util.py
-# in chat.common
+# in synfony
+
+from enum import Enum, EnumMeta
+from synfony.serialization import SerializationUtils
+from typing import Callable, Dict, List, Optional, Type
 
 import builtins
-
-from chat.common.serialization import SerializationUtils
-from enum import Enum, EnumMeta
-from typing import Callable, Dict, List, Optional, Type
 
 
 class Interface(object):

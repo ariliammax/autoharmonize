@@ -1,16 +1,25 @@
 # main.py
-# this will be what each machine runs
+# in synfony
 
-from synfony.common.machine import start
-
-import argparse
+from argparse import ArgumentParser, Namespace
+from socket import AF_INET, SOCK_STREAM, socket
+from synfony.config import Config
+from threading import Thread
+from time import sleep
+from typing import List, Tuple
 
 
 def make_parser():
     """Makes a parser for command line arguments (i.e. machine addresses).
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--machines', type=list, required=True)
+    parser = ArgumentParser()
+    parser.add_argument('--id',
+                        required=True,
+                        type=int)
+    parser.add_argument('--machines',
+                        default=Config.MACHINES,
+                        required=False,
+                        type=list)
     return parser
 
 
@@ -20,14 +29,56 @@ def parse_args():
         Returns: an `argparse.Namespace` (filtering out `None` values).
     """
     parser = make_parser()
-    return argparse.Namespace(**{(k if k != 'machines' else
-                                  'other_machine_addresses'):
-                                 (v if k != 'machines' else
-                                  [tuple(*v.split(':'))])
-                                 for k, v in
-                                 parser.parse_args().__dict__.items()
-                                 if v is not None})
+    return Namespace(**{k: (v if k != 'machines' else [(vv.split(':')[0],
+                                                        int(vv.split(':')[1]))
+                                                       for vv in v])
+                        for k, v in parser.parse_args().__dict__.items()
+                        if v is not None})
 
 
-if __name__ == '__main__':
-    start(**parse_args().__dict__)
+def accept_clients(other_machine_addresses, s: socket):
+    for _ in other_machine_addresses:
+        connection, _ = s.accept()
+        Thread(target=listen_client, args=(connection,)).start()
+
+
+def listen_client(connection):
+    while True:
+        _ = connection.recv(Config.INT_LEN)
+
+
+def handler(e, s: socket):
+    s.close()
+    if e is not None:
+        raise e
+
+
+def main(id: int, machines: List[str]):
+    s = socket(AF_INET, SOCK_STREAM)
+    try:
+        machine_address = machines[id]
+        other_machine_addresses = machines[id+1:] + machines[:id]
+        s.bind(machine_address)
+        s.listen()
+        s.settimeout(None)
+        sleep(Config.TIMEOUT)
+        Thread(target=accept_clients,
+               args=(other_machine_addresses, s)).start()
+        sleep(Config.TIMEOUT)
+        other_sockets = []
+        for other_machine_address in other_machine_addresses:
+            other_socket = socket(AF_INET, SOCK_STREAM)
+            other_socket.settimeout(None)
+            other_socket.connect(other_machine_address)
+            other_sockets.append(other_socket)
+        # TODO
+        while True:
+            pass
+    except Exception as e:
+        handler(e=e, s=s)
+    finally:
+        handler(e=None, s=s)
+
+
+if __name__ == "__main__":
+    main(**parse_args().__dict__)
