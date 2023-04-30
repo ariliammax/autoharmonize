@@ -11,3 +11,8 @@ class Config:
                 'localhost:30000']
     STR_MAX_LEN = 280
     TIMEOUT = 2
+
+class UIConfig:
+    SCREEN_HEIGHT = 480
+    SCREEN_WIDTH = 640
+    fps=60
