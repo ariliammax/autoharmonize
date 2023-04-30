@@ -1,5 +1,6 @@
 from setuptools import setup
 
+
 setup(name='synfony',
       version='0.1',
       packages=[],

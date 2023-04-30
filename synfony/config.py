@@ -1,6 +1,7 @@
 # config.py
 # in synfony
 
+
 # Useful configuration constants throughout the codebase.
 class Config:
     INT_LEN = 1024
