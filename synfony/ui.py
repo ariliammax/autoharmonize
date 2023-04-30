@@ -1,5 +1,6 @@
-from synfony.config import UIConfig
 from synfony.callbacks import *
+from synfony.config import UIConfig
+from synfony.streamer import LocalMusicStreamer
 
 import pygame
 
@@ -140,6 +141,9 @@ class SeekSlider():
 def initUI():
     pygame.init()
 
+    streamer = LocalMusicStreamer()
+    streamer.init()
+
     songTitleSurface = pygame.font.SysFont('Arial', 40).render("song.mp3", True, (255, 255, 255))
     songTitleRect = songTitleSurface.get_rect()
     songTitleRect.x = (UIConfig.SCREEN_WIDTH / 2) - (songTitleRect.width / 2)
@@ -153,8 +157,11 @@ def initUI():
         screen.blit(songTitleSurface, songTitleRect)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                streamer.shutdown()
                 pygame.quit()
                 exit()
+            else:
+                streamer.event(event)
         for object in objects:
             object.process()
         pygame.display.flip()
