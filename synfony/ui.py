@@ -22,6 +22,13 @@ def stringify_time(time):
   else:
     return str(minutes) + ":" + str(seconds)
 
+def stringify_volume(volume):
+    if (volume == 0):
+        return "MUTED"
+    elif (volume == 100):
+        return "MAX"
+    else:
+        return str(int(volume))
 
 class PlayButton():
     def __init__(self, x, y, width, height, onclickFunction=None):
@@ -74,16 +81,18 @@ class PlayButton():
 
 
 class SeekSlider():
-    def __init__(self, x, y, width, height, min_val, max_val, initial_val, onchangeFunction=None):
+    def __init__(self, x, y, width, height, min_val, max_val, get_current_val, stringify, onchangeFunction=None):
         self.x = x
         self.y = y
         self.width = width
         self.height = height
         self.min_val = min_val
         self.max_val = max_val
-        self.value = initial_val
+        self.value = get_current_val(0)
+        self.get_current_val = get_current_val
         self.onchangeFunction = onchangeFunction
         self.isDragging = False
+        self.stringify = stringify
 
         self.fillColors = {
             'background': '#000000',
@@ -109,14 +118,13 @@ class SeekSlider():
         pygame.draw.rect(self.sliderSurface, self.fillColors['knob'], knobRect)
 
         #draw left label
-        current_time = self.value
-        self.leftLabelSurface = pygame.font.SysFont('Arial', 40).render(stringify_time(current_time), True, (255, 255, 255))
+        self.leftLabelSurface = pygame.font.SysFont('Arial', 40).render(self.stringify(self.value), True, (255, 255, 255))
         self.leftLabelRect = self.leftLabelSurface.get_rect()
         self.leftLabelRect.x = self.x + 15
         self.leftLabelRect.y = self.y - self.height - 5
         
         #draw right label
-        self.rightLabelSurface = pygame.font.SysFont('Arial', 40).render(stringify_time(self.max_val), True, (255, 255, 255))
+        self.rightLabelSurface = pygame.font.SysFont('Arial', 40).render(self.stringify(self.max_val), True, (255, 255, 255))
         self.rightLabelRect = self.leftLabelSurface.get_rect()
         self.rightLabelRect.x = self.x + self.width - 100
         self.rightLabelRect.y = self.y - self.height - 5
@@ -137,9 +145,13 @@ class SeekSlider():
 
                 # call the onchange function if it exists
                 if self.onchangeFunction is not None:
-                    self.onclickFunction(0, streamer.get_current_time(0), streamer.is_playing(0), event_queue)
+                    self.onchangeFunction(0, self.value, streamer.is_playing(0), event_queue)
+            else:
+                self.value = self.get_current_val(0)
+                # update the position of the knob based on the new value
+                knob_x = int(((self.value - self.min_val) / range) * (self.width - self.height))
         else:
-            self.value = streamer.get_current_time(0)
+            self.value = self.get_current_val(0)
             # update the position of the knob based on the new value
             knob_x = int(((self.value - self.min_val) / range) * (self.width - self.height))
   
@@ -165,7 +177,8 @@ def initUI():
     songTitleRect.y = 0
 
     PlayButton(120, 190, 400, 100, playButtonTapped)
-    SeekSlider(0, 410, 640, 50, 0, streamer.get_total_time(0), 0, didSeekTo)
+    SeekSlider(0, 410, 640, 50, 0, streamer.get_total_time(0), streamer.get_current_time, stringify_time, didSeekTo)
+    SeekSlider((UIConfig.SCREEN_WIDTH / 2) - (300 / 2), 100, 300, 50, 0, 100, (lambda _: 50), stringify_volume, (lambda _1, _2, _3, _4: 0))
 
     while True:
         screen.fill((0, 0, 0))
