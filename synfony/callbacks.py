@@ -2,7 +2,7 @@ from synfony.models import PauseEvent, PlayEvent, SeekEvent
 from synfony.models import ChannelState
 
 
-def playButtonTapped(channel_idx, timestamp, is_playing, eventQueue):
+def playButtonTapped(channel_idx, timestamp, is_playing, eventQueue, streamer):
     if is_playing:
         print('Play Pressed')
         eventQueue.append(PlayEvent(
@@ -21,9 +21,18 @@ def playButtonTapped(channel_idx, timestamp, is_playing, eventQueue):
                 playing=is_playing
             )
         ))
+    streamer.sync(
+        [
+            ChannelState(
+                idx=channel_idx,
+                timestamp=timestamp,
+                playing=is_playing
+            )
+        ]
+    )
     return eventQueue
 
-def didSeekTo(channel_idx, seek_timestamp, is_playing, eventQueue):
+def didSeekTo(channel_idx, seek_timestamp, is_playing, eventQueue, streamer):
     print('Did seek to: ' + str(seek_timestamp))
     eventQueue.append(SeekEvent(
         channel_state = ChannelState(
@@ -32,4 +41,13 @@ def didSeekTo(channel_idx, seek_timestamp, is_playing, eventQueue):
             playing=is_playing
         )
     ))
+    streamer.sync(
+        [
+            ChannelState(
+                idx=channel_idx,
+                timestamp=seek_timestamp,
+                playing=is_playing
+            )
+        ]
+    )
     return eventQueue

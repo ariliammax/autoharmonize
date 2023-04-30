@@ -31,6 +31,10 @@ class Streamer(ABC):
         pass
 
     @abstractmethod
+    def get_volume(self, channel_id):
+        pass
+
+    @abstractmethod
     def is_playing(self, channel_id):
         pass
 
@@ -48,6 +52,7 @@ class LocalMusicStreamer(Streamer):
     current_chunk_realtime = []
     current_chunk_timestamp = []
     playing = []
+    volume = []
 
     def init(self):
         pygame.mixer.init()
@@ -60,6 +65,7 @@ class LocalMusicStreamer(Streamer):
             self.current_chunk_realtime.append(datetime.now())
             self.current_chunk_timestamp.append(0.0)
             self.playing.append(True)
+            self.volume.append(50)
 
     def event(self, event):
         channel_id = event.type - pygame.USEREVENT
@@ -90,11 +96,23 @@ class LocalMusicStreamer(Streamer):
     def get_total_time(self, channel_id):
         return Config.CHANNELS[channel_id][1] * Config.CHANNELS[channel_id][2]
 
+    def get_volume(self, channel_id):
+        return self.volume[channel_id]
+
     def is_playing(self, channel_id):
         return self.playing[channel_id]
 
     def sync(self, state: list[ChannelState]):
-        pass
+        for channel_state in state:
+            channel_id = channel_state.get_idx()
+            play = channel_state.get_playing()
+            timestamp = channel_state.get_timestamp()
+            channel = pygame.mixer.Channel(channel_id)
+            if self.playing[channel_id] and not play:
+                channel.pause()
+            elif not self.playing[channel_id] and play:
+                channel.unpause()
+            self.playing[channel_id] = play
 
     def shutdown(self):
         pygame.mixer.stop()

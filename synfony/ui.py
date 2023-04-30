@@ -70,7 +70,7 @@ class PlayButton():
                 self.buttonSurface.fill(self.fillColors['pressed'])
                 if not self.alreadyPressed:
                     self.alreadyPressed = True
-                    self.onclickFunction(0, streamer.get_current_time(0), not self.isSelected, event_queue)
+                    self.onclickFunction(0, streamer.get_current_time(0), not self.isSelected, event_queue, streamer)
             else:
                 self.alreadyPressed = False
         self.buttonSurface.blit(self.buttonSurf, [
@@ -145,7 +145,7 @@ class SeekSlider():
 
                 # call the onchange function if it exists
                 if self.onchangeFunction is not None:
-                    self.onchangeFunction(0, self.value, streamer.is_playing(0), event_queue)
+                    self.onchangeFunction(0, self.value, streamer.is_playing(0), event_queue, streamer)
             else:
                 self.value = self.get_current_val(0)
                 # update the position of the knob based on the new value
@@ -178,7 +178,7 @@ def initUI():
 
     PlayButton(120, 190, 400, 100, playButtonTapped)
     SeekSlider(0, 410, 640, 50, 0, streamer.get_total_time(0), streamer.get_current_time, stringify_time, didSeekTo)
-    SeekSlider((UIConfig.SCREEN_WIDTH / 2) - (300 / 2), 100, 300, 50, 0, 100, (lambda _: 50), stringify_volume, (lambda _1, _2, _3, _4: 0))
+    SeekSlider((UIConfig.SCREEN_WIDTH / 2) - (300 / 2), 100, 300, 50, 0, 100, streamer.get_volume, stringify_volume, (lambda _1, _2, _3, _4, _5: 0))
 
     while True:
         screen.fill((0, 0, 0))
