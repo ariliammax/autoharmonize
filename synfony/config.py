@@ -12,3 +12,4 @@ class Config:
                 'localhost:30000']
     STR_MAX_LEN = 280
     TIMEOUT = 2
+    CHUNK_MAX_DURATION_MS = 2000

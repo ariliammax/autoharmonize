@@ -13,4 +13,5 @@ class EventCode(Enum):
 
 # The operation codes for all endpoints (and which are serialized in the wire).
 class OperationCode(Enum):
-    HEARTBEAT = 0  # (and all user events)
+    HEARTBEAT = 0
+    IDENTITY = 1
