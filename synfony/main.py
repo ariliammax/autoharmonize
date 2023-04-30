@@ -2,6 +2,7 @@
 # in synfony
 
 from argparse import ArgumentParser, Namespace
+from multiprocessing import Process
 from socket import AF_INET, SOCK_STREAM, socket
 from synfony.config import Config
 from sys import exit
@@ -16,13 +17,17 @@ def make_parser():
     """Makes a parser for command line arguments (i.e. machine addresses).
     """
     parser = ArgumentParser()
-    parser.add_argument('--id',
+    parser.add_argument('--idx',
                         required=True,
                         type=int)
     parser.add_argument('--machines',
                         default=Config.MACHINES,
                         required=False,
                         type=list)
+    parser.add_argument('--multiprocess',
+                        default=False,
+                        required=False,
+                        type=bool)
     return parser
 
 
@@ -40,27 +45,35 @@ def parse_args():
 
 
 def accept_clients(other_machine_addresses, s: socket):
+    """Called when the initial handshake between two machines begins.
+    """
     for _ in other_machine_addresses:
         connection, _ = s.accept()
         Thread(target=listen_client, args=(connection,)).start()
 
 
 def listen_client(connection):
+    """For continued listening on a client.
+    """
     while True:
         _ = connection.recv(Config.INT_LEN)
 
 
 def handler(e, s: socket):
+    """Handle any errors that come up.
+    """
     s.close()
     if e is not None:
         raise e
 
 
-def main(id: int, machines: List[str]):
+def main(idx: int, machines: List[str]):
+    """Start the connections and what not.
+    """
     s = socket(AF_INET, SOCK_STREAM)
     try:
-        machine_address = machines[id]
-        other_machine_addresses = machines[id+1:] + machines[:id]
+        machine_address = machines[idx]
+        other_machine_addresses = machines[idx + 1:] + machines[:idx]
         s.bind(machine_address)
         s.listen()
         s.settimeout(None)
@@ -83,5 +96,17 @@ def main(id: int, machines: List[str]):
         handler(e=None, s=s)
 
 
-if __name__ == "__main__":
-    main(**parse_args().__dict__)
+if __name__ == '__main__':
+    args = parse_args()
+    if args.multiprocess:
+        for idx in range(3):
+            p = Process(
+                target=main,
+                args=(idx=idx,
+                      machines=args.machines)
+            )
+            p.start()
+        while True:
+            pass
+    else:
+        main(**args.__dict__)
