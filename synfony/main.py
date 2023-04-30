@@ -4,9 +4,12 @@
 from argparse import ArgumentParser, Namespace
 from socket import AF_INET, SOCK_STREAM, socket
 from synfony.config import Config
+from sys import exit
 from threading import Thread
 from time import sleep
-from typing import List, Tuple
+from typing import List
+
+import pygame
 
 
 def make_parser():
