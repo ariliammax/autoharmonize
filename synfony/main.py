@@ -5,10 +5,16 @@ from argparse import ArgumentParser, Namespace
 from multiprocessing import Process
 from socket import AF_INET, SOCK_STREAM, socket
 from synfony.config import Config
+from synfony.enums import EventCode, OperationCode
+from synfony.models import ChannelState, consensus
+from synfony.models import PauseEvent, PlayEvent, SeekEvent
 from synfony.ui import initUI
 from threading import Thread
-from time import sleep
 from typing import List, Tuple
+
+
+import time
+
 
 def make_parser():
     """Makes a parser for command line arguments (i.e. machine addresses).
@@ -43,17 +49,26 @@ def parse_args():
 
 def accept_clients(other_machine_addresses, s: socket):
     """Called when the initial handshake between two machines begins.
+
+        The startup protocol is:
+            1 - connect
+            2 - send `IdentityRequest`s
+            3 - TODO: send `AddressRequest`s for joining
     """
-    for _ in other_machine_addresses:
+    while True:
         connection, _ = s.accept()
         Thread(target=listen_client, args=(connection,)).start()
 
 
 def listen_client(connection):
-    """For continued listening on a client.
+    """For continued listening on a client, where the handshakes are received.
     """
     while True:
         _ = connection.recv(Config.INT_LEN)
+
+
+def handshake():
+    pass
 
 
 def handler(e, s: socket):
@@ -74,14 +89,14 @@ def main(idx: int, machines: List[str]):
         s.bind(machine_address)
         s.listen()
         s.settimeout(None)
-        sleep(Config.TIMEOUT)
+        time.sleep(Config.TIMEOUT)
         Thread(target=accept_clients,
                args=(other_machine_addresses, s)).start()
-        sleep(Config.TIMEOUT)
+        time.sleep(Config.TIMEOUT)
         other_sockets = []
         for other_machine_address in other_machine_addresses:
             other_socket = socket(AF_INET, SOCK_STREAM)
-            other_socket.settimeout(None)
+            other_socket.settimeout(None)  # TODO handshake timeout post start
             other_socket.connect(other_machine_address)
             other_sockets.append(other_socket)
         initUI()

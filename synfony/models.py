@@ -14,14 +14,12 @@ from typing import Callable, Dict, List
 # choice function from a bunch of states
 ChannelState = Model.model_with_fields(
     idx=int,
-    chunk=int,
     timestamp=int,
     playing=bool
 )
 
 DEFAULT_CHANNEL_STATE = ChannelState(
     idx=0,
-    chunk=0
     timestamp=0,
     playing=False
 )
@@ -136,16 +134,17 @@ def consensus(channel_idx: int, channel_events_states: List[BaseEvent]):
         from each of the machine states from sent.
 
         Roughly, the protocol is:
-            1 - time / chunk which is latest is inherited in the updated state
+            1 - time which is latest is inherited in the updated state
                 
             2 - pausing takes precedence over playing over seeking
 
             3 - conflicting seeks go to the furthest along
     """
+    if len(channel_events_states) == 0:
+        return DEFAULT_CHANNEL_STATE
+
     ordered_states = [state for state in channel_states]
-    ordered_states.sort(key=lambda state:
-                        -Config.CHUNK_MAX_DURATION_MS * state.get_chunk() +
-                        -1 * state.get_timestamp())
+    ordered_states.sort(key=lambda state: -1 * state.get_timestamp())
 
     any_pause = len([state for state in ordered_states
                      if state.event_code == EventCode.PAUSE.value]) > 0
@@ -165,7 +164,6 @@ def consensus(channel_idx: int, channel_events_states: List[BaseEvent]):
 
     return ChannelState(
         idx=channel_idx,
-        chunk=ordered_states[seek_idxes[0]].get_chunk(),
         timestamp=ordered_states[seek_idxes[0]].get_timestamp(),
         playing=(False if any_pause else (any_play or any_playing))
     )
