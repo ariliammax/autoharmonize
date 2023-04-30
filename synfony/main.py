@@ -102,8 +102,7 @@ if __name__ == '__main__':
         for idx in range(3):
             p = Process(
                 target=main,
-                args=(idx=idx,
-                      machines=args.machines)
+                args=(idx, args.machines)
             )
             p.start()
         while True:
