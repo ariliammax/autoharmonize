@@ -5,10 +5,11 @@
 # Useful configuration constants throughout the codebase.
 class Config:
     CHANNELS = [
-        "The Turn Down/bass",
-        "The Turn Down/drums",
-        "The Turn Down/other",
-        "The Turn Down/vocals",
+        # [FILE, CHUNKS, CHUNK_LENGTH]
+        ["The Turn Down/bass", 100, 1.4929],
+        ["The Turn Down/drums", 100, 1.4929],
+        ["The Turn Down/other", 100, 1.4929],
+        ["The Turn Down/vocals", 100, 1.4929],
     ]
     INT_LEN = 1024
     INT_MAX_LEN = 1 << 64
