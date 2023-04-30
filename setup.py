@@ -5,5 +5,6 @@ setup(name='synfony',
       packages=['common',],
       package_dir={'common': 'synfony/common/',},
       install_requires=['flake8',
+                        'pygame',
                         'pytest'],
       python_requires='~=3.10')
