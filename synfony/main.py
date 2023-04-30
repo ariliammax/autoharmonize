@@ -7,7 +7,7 @@ from socket import AF_INET, SOCK_STREAM, socket
 from synfony.config import Config
 from synfony.enums import EventCode, OperationCode
 from synfony.models import ChannelState, consensus
-from synfony.models import PauseEvent, PlayEvent, SeekEvent
+from synfony.models import BaseEvent, PauseEvent, PlayEvent, SeekEvent
 from synfony.ui import initUI
 from threading import Thread
 from typing import List, Tuple
@@ -67,7 +67,28 @@ def listen_client(connection):
         _ = connection.recv(Config.INT_LEN)
 
 
-def handshake():
+def handshake(other_sockets: List[socket],
+              state: ChannelState,
+              events: List[BaseEvent]):
+    """Share and reach consensus about `state`, so we can pass it to the
+        `LocalMusicStreamer`.
+
+        The protocol is:
+            1 - send out my state.
+            2 - get everyone else's state;
+                if none received, then that itsy-bitsy guy is down:
+                break the socket so that guy cuts himself out.
+            3 - do consensus, update state, call `LocalMusicStreamer.sync`.
+            4 - do the next handshake-heartbeat.
+
+        (2) can take up to `Config.HEARTBEAT_TIMEOUT` amount of time; so then
+        (3, 4) will take up the remainder of time of
+            `Config.HANDSHAKE_INTERVAL`, which is a lil longer.
+
+        Also, we are actually doing a bunch of retries in (1) / (2), which
+        are timing out in `Config.HANDSHAKE_TIMEOUT`, whcih are much faster
+        than `Config.HEARTBEAT_TIMEOUT`.
+    """
     pass
 
 

@@ -1,3 +1,6 @@
+# streamer.py
+# in synfony
+
 from abc import ABC, abstractmethod
 from synfony.config import Config
 from time import sleep

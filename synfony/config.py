@@ -18,7 +18,10 @@ class Config:
                 'localhost:30001']
     STR_MAX_LEN = 280
     TIMEOUT = 2
-    CHUNK_MAX_DURATION_MS = 2000
+
+    HANDSHAKE_TIMEOUT = 0.1
+    HANDSHAKE_INTERVAL = 1.001
+    HEARTBEAT_TIMEOUT = 1
 
 
 class UIConfig:

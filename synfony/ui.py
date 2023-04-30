@@ -1,14 +1,20 @@
+# callbacks.py
+# in synfony
+
 from synfony.callbacks import *
 from synfony.config import UIConfig
 from synfony.streamer import LocalMusicStreamer
 
 import pygame
 
+
 screen = pygame.display.set_mode((UIConfig.SCREEN_WIDTH, UIConfig.SCREEN_HEIGHT))
 fpsClock = pygame.time.Clock()
 objects = []
 
+
 event_queue = []
+
 
 def stringify_time(time):
   minutes = int(time // 60)
@@ -17,6 +23,7 @@ def stringify_time(time):
     return str(minutes) + ":0" + str(seconds)
   else:
     return str(minutes) + ":" + str(seconds)
+
 
 class PlayButton():
     def __init__(self, x, y, width, height, onclickFunction=None):
@@ -66,7 +73,8 @@ class PlayButton():
             self.buttonRect.height/2 - self.buttonSurf.get_rect().height/2
         ])
         screen.blit(self.buttonSurface, self.buttonRect)
-        
+
+
 class SeekSlider():
     def __init__(self, x, y, width, height, min_val, max_val, initial_val, onchangeFunction=None):
         self.x = x
@@ -144,7 +152,8 @@ class SeekSlider():
         screen.blit(self.sliderSurface, self.sliderRect)
         screen.blit(self.leftLabelSurface, self.leftLabelRect)
         screen.blit(self.rightLabelSurface, self.rightLabelRect)
-    
+
+
 def initUI():
     pygame.init()
 

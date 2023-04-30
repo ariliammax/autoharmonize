@@ -1,7 +1,7 @@
 # models.py
 # in synfony
 
-from synfony.operations import OperationCode, EventCode
+from synfony.enums import OperationCode, EventCode
 from synfony.serialization import SerializationUtils
 from synfony.util import Model
 from typing import Callable, Dict, List
@@ -321,7 +321,7 @@ HeartbeatRequest = BaseRequest.add_fields_with_operation_code(
     sent_timestamp=list,
     operation_code=OperationCode.HEARTBEAT,
     fields_list_nested=dict(
-        events=BaseEvent
+        channel_events_states=BaseEvent
     )
 )
 HeartbeatResponse = BaseResponse.add_fields_with_operation_code(
