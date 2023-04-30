@@ -318,7 +318,7 @@ class BaseResponse(BaseRequest.add_fields(error=str)):
 
 HeartbeatRequest = BaseRequest.add_fields_with_operation_code(
     channel_events_states=list,
-    sent_timestamp=list,
+    sent_timestamp=int,
     operation_code=OperationCode.HEARTBEAT,
     fields_list_nested=dict(
         channel_events_states=BaseEvent

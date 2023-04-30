@@ -139,4 +139,4 @@ if __name__ == '__main__':
         while True:
             pass
     else:
-        main(**args.__dict__)
+        main(args.idx, args.machiens)
