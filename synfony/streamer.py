@@ -63,11 +63,13 @@ class LocalMusicStreamer(Streamer):
             return
         file = Config.CHANNELS[channel_id][0]
         chunk = self.current_chunk_index[channel_id] + 1
+        if chunk > Config.CHANNELS[channel_id][1]:
+            chunk = 1
+        self.current_chunk_index[channel_id] = chunk
         chunk = str(chunk) if chunk > 9 else "0" + str(chunk)
         sound = pygame.mixer.Sound(file + "-" + chunk + ".mp3")
         channel = pygame.mixer.Channel(channel_id)
         channel.queue(sound)
-        self.current_chunk_index[channel_id] += 1
         self.current_chunk_realtime[channel_id] = datetime.now()
         self.current_chunk_timestamp[channel_id] = 0.0
         self.playing.append(True)
