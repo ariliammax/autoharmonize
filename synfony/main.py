@@ -27,8 +27,7 @@ def make_parser():
     parser.add_argument('--multiprocess',
                         action='store_true',
                         default=False,
-                        required=False,
-                        type=bool)
+                        required=False)
     return parser
 
 
