@@ -31,7 +31,6 @@ MixedChannelState = ChannelState.add_fields(
     muted=bool,
 )
 
-
 class BaseEvent(Model.model_with_fields(event_code=int)):
     """the basic data model of the `Event`s. Like operations, we will have to
         "peek" at the event code to see how to properly deserialize.

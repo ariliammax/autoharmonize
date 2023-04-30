@@ -12,9 +12,7 @@ screen = pygame.display.set_mode((UIConfig.SCREEN_WIDTH, UIConfig.SCREEN_HEIGHT)
 fpsClock = pygame.time.Clock()
 objects = []
 
-
 event_queue = []
-
 
 def stringify_time(time):
   minutes = int(time // 60)
@@ -65,7 +63,7 @@ class PlayButton():
                 self.buttonSurface.fill(self.fillColors['pressed'])
                 if not self.alreadyPressed:
                     self.alreadyPressed = True
-                    self.onclickFunction(event_queue, not self.isSelected)
+                    self.onclickFunction(0, streamer.get_current_time(0), not self.isSelected, event_queue)
             else:
                 self.alreadyPressed = False
         self.buttonSurface.blit(self.buttonSurf, [
@@ -111,14 +109,14 @@ class SeekSlider():
         pygame.draw.rect(self.sliderSurface, self.fillColors['knob'], knobRect)
 
         #draw left label
-        current_time = (self.value/self.max_val) * streamer.get_total_time(0)
+        current_time = self.value
         self.leftLabelSurface = pygame.font.SysFont('Arial', 40).render(stringify_time(current_time), True, (255, 255, 255))
         self.leftLabelRect = self.leftLabelSurface.get_rect()
         self.leftLabelRect.x = self.x + 15
         self.leftLabelRect.y = self.y - self.height - 5
         
         #draw right label
-        self.rightLabelSurface = pygame.font.SysFont('Arial', 40).render(stringify_time(streamer.get_total_time(0)), True, (255, 255, 255))
+        self.rightLabelSurface = pygame.font.SysFont('Arial', 40).render(stringify_time(self.max_val), True, (255, 255, 255))
         self.rightLabelRect = self.leftLabelSurface.get_rect()
         self.rightLabelRect.x = self.x + self.width - 100
         self.rightLabelRect.y = self.y - self.height - 5
@@ -139,7 +137,7 @@ class SeekSlider():
 
                 # call the onchange function if it exists
                 if self.onchangeFunction is not None:
-                    self.onchangeFunction(self.value, event_queue)
+                    self.onclickFunction(0, streamer.get_current_time(0), streamer.is_playing(0), event_queue)
         else:
             self.value = streamer.get_current_time(0)
             # update the position of the knob based on the new value
@@ -166,7 +164,7 @@ def initUI():
     songTitleRect.y = 0
 
     PlayButton(120, 190, 400, 100, playButtonTapped)
-    SeekSlider(0, 410, 640, 50, 0, 100, 0, didSeekTo)
+    SeekSlider(0, 410, 640, 50, 0, streamer.get_total_time(0), 0, didSeekTo)
 
     while True:
         screen.fill((0, 0, 0))
