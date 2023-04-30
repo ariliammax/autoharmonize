@@ -18,13 +18,14 @@ def make_parser():
     """
     parser = ArgumentParser()
     parser.add_argument('--idx',
-                        required=True,
+                        required=False,
                         type=int)
     parser.add_argument('--machines',
                         default=Config.MACHINES,
                         required=False,
                         type=list)
     parser.add_argument('--multiprocess',
+                        action='store_true',
                         default=False,
                         required=False,
                         type=bool)
