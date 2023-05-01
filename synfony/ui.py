@@ -7,21 +7,6 @@ from synfony.streamer import LocalMusicStreamer
 
 import pygame
 
-def stringify_time(time):
-  minutes = int(time // 60)
-  seconds = int(time - (minutes * 60))
-  if (seconds < 10):
-    return str(minutes) + ":0" + str(seconds)
-  else:
-    return str(minutes) + ":" + str(seconds)
-
-def stringify_volume(volume):
-    if (volume == 0):
-        return "MUTED"
-    elif (volume == 100):
-        return "MAX"
-    else:
-        return str(int(volume))
 
 class Button():
     def __init__(self, ui, x, y, width, height, txt, selectedTxt, isSelectedFunction=None, onclickFunction=None):
@@ -71,9 +56,11 @@ class Button():
                     self.alreadyPressed = True
                     self.onclickFunction(
                         channel_idx=self.ui.channel, 
-                        timestamp=streamer.get_current_time(self.ui.channel), 
-                        is_playing=not self.isSelected, 
+                        timestamp=streamer.get_current_time(self.ui.channel),
+                        is_playing=streamer.is_playing(self.ui.channel),  
+                        volume=streamer.get_volume(self.ui.channel),
                         event_queue=self.ui.event_queue,
+                        is_selected=not self.isSelected, 
                         streamer=streamer
                     )
             else:
@@ -227,9 +214,11 @@ class SeekSlider():
                 if self.onchangeFunction is not None:
                      self.onchangeFunction(
                         channel_idx=self.ui.channel, 
-                        seek_value=self.value,
-                        is_playing=not streamer.is_playing(self.ui.channel), 
+                        timestamp = streamer.get_current_time(self.ui.channel), 
+                        is_playing=streamer.is_playing(self.ui.channel), 
+                        volume=streamer.get_volume(self.ui.channel),
                         event_queue=self.ui.event_queue,
+                        seek_value=self.value,
                         streamer=streamer
                     )
             else:
@@ -271,8 +260,8 @@ class UI():
 
         Button(self, 120, 190, 400, 100, "Play", "Pause", streamer.is_playing, playButtonTapped)
         Picker(self, 120, 300, 400, 100, 0, 0, streamer.get_num_channels() - 1, None)
-        SeekSlider(self, 0, UIConfig.SCREEN_HEIGHT - 70, 640, 50, 0, streamer.get_total_time, streamer.get_current_time, stringify_time, didSeekTo)
-        SeekSlider(self, (UIConfig.SCREEN_WIDTH / 2) - (300 / 2), songTitleRect.height + 70, 300, 50, 0, (lambda _: 100), streamer.get_volume, stringify_volume, didChangeVolumeTo)
+        SeekSlider(self, 0, UIConfig.SCREEN_HEIGHT - 70, 640, 50, 0, streamer.get_total_time, streamer.get_current_time, self.stringify_time, didSeekTo)
+        SeekSlider(self, (UIConfig.SCREEN_WIDTH / 2) - (300 / 2), songTitleRect.height + 70, 300, 50, 0, (lambda _: 100), streamer.get_volume, self.stringify_volume, didChangeVolumeTo)
 
         while True:
             title = streamer.get_title(self.channel)
@@ -290,3 +279,19 @@ class UI():
                 object.process(streamer)
             pygame.display.flip()
             self.fpsClock.tick(UIConfig.fps)
+    
+    def stringify_time(self, time):
+        minutes = int(time // 60)
+        seconds = int(time - (minutes * 60))
+        if (seconds < 10):
+            return str(minutes) + ":0" + str(seconds)
+        else:
+            return str(minutes) + ":" + str(seconds)
+
+    def stringify_volume(self, volume):
+        if (volume == 0):
+            return "MUTED"
+        elif (volume == 100):
+            return "MAX"
+        else:
+            return str(int(volume))
