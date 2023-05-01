@@ -14,9 +14,9 @@ class Config:
     PACKET_MAX_LEN = 1024
     INT_MAX_LEN = 1 << 64
     LIST_MAX_LEN = 255
-    MACHINES = ['localhost:10020',
-                'localhost:20020',
-                'localhost:30020']
+    MACHINES = ['localhost:10000',
+                'localhost:20000',
+                'localhost:30000']
     STR_MAX_LEN = 280
     TOLERABLE_DELAY = 0.1
 
