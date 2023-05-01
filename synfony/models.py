@@ -78,6 +78,8 @@ class BaseEvent(Model.model_with_fields(event_code=int)):
                 return super(BaseEvent, PlayEvent).deserialize(data)
             case EventCode.SEEK:
                 return super(BaseEvent, SeekEvent).deserialize(data)
+            case EventCode.VOLUME:
+                return super(BaseEvent, VolumeEvent).deserialize(data)
             case _:
                 raise NotImplementedError()
 

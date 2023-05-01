@@ -3,7 +3,7 @@
 
 from argparse import ArgumentParser, Namespace
 from multiprocessing import Process
-from socket import AF_INET, SOCK_STREAM, socket
+from socket import AF_INET, SHUT_RDWR, SOCK_STREAM, socket
 from synfony.config import Config
 from synfony.enums import EventCode, OperationCode
 from synfony.models import BaseEvent, PauseEvent, PlayEvent, SeekEvent
@@ -208,7 +208,12 @@ def metronome(other_sockets: List[socket],
 def handler(e, s: socket):
     """Handle any errors that come up.
     """
-    s.close()
+    try:
+        s.shutdown(SHUT_RDWR)
+    except:
+        pass
+    finally:
+        s.close()
     if e is not None:
         raise e
 
@@ -228,22 +233,26 @@ def main(idx: int, machines: List[str]):
         s.bind(machine_address)
         s.listen()
         s.settimeout(None)
-        time.sleep(Config.TIMEOUT)
         # this should be `machine_addresses: List[MachineAddress]`
         threading.Thread(target=accept_clients,
                          args=(other_machine_addresses, s)).start()
         # TODO: start timer for handshake
-        time.sleep(Config.TIMEOUT)
         other_sockets = []
         for other_machine_address in other_machine_addresses:
-            other_socket = socket(AF_INET, SOCK_STREAM)
-            other_socket.settimeout(None)  # TODO handshake timeout post start
-            other_socket.connect(other_machine_address)
-            # other_socket.sendall(IdentityRequest(
-            #     idx=idx,
-            #     machine_address=machine_address).serialize()
-            # )
-            other_sockets.append(other_socket)
+            while True:
+                try:
+                    other_socket = socket(AF_INET, SOCK_STREAM)
+                    # TODO handshake timeout post start
+                    other_socket.settimeout(None)
+                    other_socket.connect(other_machine_address)
+                    # other_socket.sendall(IdentityRequest(
+                    #     idx=idx,
+                    #     machine_address=machine_address).serialize()
+                    # )
+                    other_sockets.append(other_socket)
+                    break
+                except:
+                    continue
         initUI()
     except Exception as e:
         handler(e=e, s=s)
