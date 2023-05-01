@@ -13,7 +13,8 @@ from typing import Callable, Dict, List
 MachineAddress = Model.model_with_fields(
     host=str,
     idx=int,
-    port=int
+    port=int,
+    status=bool
 )
 
 # this is the state which must reach consensus.
@@ -22,7 +23,9 @@ MachineAddress = Model.model_with_fields(
 ChannelState = Model.model_with_fields(
     idx=int,
     timestamp=int,
-    playing=bool
+    playing=bool,
+    # TODO: loading / buffering?
+    volume=int
 )
 
 DEFAULT_CHANNEL_STATE = ChannelState(
@@ -123,14 +126,14 @@ PauseEvent = BaseEvent.add_fields_with_event_code(
 
 PlayEvent = BaseEvent.add_fields_with_event_code(
     channel_state=ChannelState,
-    timestamp=int,
+    realtime=int,
     event_code=EventCode.PLAY
 )
 
 
 SeekEvent = BaseEvent.add_fields_with_event_code(
     channel_state=ChannelState,
-    timestamp=int,
+    realtime=int,
     event_code=EventCode.SEEK
 )
 

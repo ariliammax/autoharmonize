@@ -60,6 +60,7 @@ def accept_clients(other_machine_addresses, s: socket):
     while True:
         # 1
         connection, _ = s.accept()
+        continue
 
         # 2 - `IdentityRequest`
         while True:
@@ -93,16 +94,16 @@ def listen_client(idx, connection):
         _ = connection.recv(Config.PACKET_MAX_LEN)
 
 
-def metrosexual(other_sockets: List[socket],
-                state: ChannelState,
-                events: List[BaseEvent]):
+def metronome(other_sockets: List[socket],
+              state: ChannelState,
+              events: List[BaseEvent]):
     """Share and reach consensus about `state`, so we can pass it to the
         `LocalMusicStreamer`.
 
         The protocol is:
             1 - send out my state.
             2 - get everyone else's state;
-                if none received, then that itsy-bitsy guy is down:
+                if none received, then that guy is down:
                 break the socket so that guy cuts himself out.
             3 - do consensus, update state, call `LocalMusicStreamer.sync`.
             4 - do the next handshake-heartbeat.
@@ -119,13 +120,51 @@ def metrosexual(other_sockets: List[socket],
     machine_addresses=[machine
                        for i, machine in
                        enumerate(other_machine_addresses)
-                       if machine is not None]
+                       if (machine is not None and
+                           machine.get_status())]
 
-    # TODO: 1 - send
+    # TODO: get from UI when it is exposed
+    #       something like `ui_manager.streamer.yada`
+    channel_state = ChannelState(
+        idx=0,
+        timestamp=0,
+        playing=False,
+        volume=0
+    )
+
+    # TODO: get events from UI when it is exposed, and deduce which is the
+    #       most recent etc.
+    event = PauseEvent(
+        channel_state=channel_state,
+        realtime=0
+    )
+
+    start_t = time.time()
+    start_t_ms = int(1000 * start_t)
+    request = HeartbeatRequest(
+        channel_events_states=[event],
+        machine_addresses=machine_addresses,
+        sent_timestamp=start_t_ms
+    )
+    request_b = request.serialize()
+
+    # 1 - send to all
+    def impl_send_state(s: socket, i: int, request_b: bytes):
+        status = False
+        while time.time() - start_t < Config.HEARTBEAT_TIMEOUT:
+            try:
+                s.sendall(request_b)
+                status = True
+                break
+            except:
+                pass
+        # TODO: lock
+        other_machine_addresses[i].set_status(status)
+    # TODO: start threads
 
     # TODO: 2 - pull off queue, wait until acceptable
     # TODO: failures for next state
-    # TODO: 3 - consensus
+    # TODO: 3 - consensus + `ui_manager.streamer.sync(...)`
     # TODO: 4 - schedule next
     pass
 
@@ -144,7 +183,8 @@ def main(idx: int, machines: List[str]):
     # machine_addresses = [MachineAddress(
     #                          host=machine[0],
     #                          idx=-1,
-    #                          port=machine[1])]
+    #                          port=machine[1],
+    #                          status=False)]
     s = socket(AF_INET, SOCK_STREAM)
     try:
         machine_address = machines[idx]
@@ -163,7 +203,7 @@ def main(idx: int, machines: List[str]):
             other_socket = socket(AF_INET, SOCK_STREAM)
             other_socket.settimeout(None)  # TODO handshake timeout post start
             other_socket.connect(other_machine_address)
-            other_socket.sendall(IdentityRequest(idx=idx).serialize())
+            # other_socket.sendall(IdentityRequest(idx=idx).serialize())
             other_sockets.append(other_socket)
         initUI()
     except Exception as e:
