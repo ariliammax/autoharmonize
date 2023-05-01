@@ -6,6 +6,9 @@
 class Config:
     CHANNELS = [
         # [FILE, CHUNKS, CHUNK_LENGTH]
+        ["The Turn Down/bass", 100, 1.4929],
+        ["The Turn Down/drums", 100, 1.4929],
+        ["The Turn Down/other", 100, 1.4929],
         ["The Turn Down/vocals", 100, 1.4929],
     ]
     PACKET_MAX_LEN = 1024

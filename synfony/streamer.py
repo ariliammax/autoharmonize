@@ -61,7 +61,9 @@ class LocalMusicStreamer(Streamer):
     def init(self):
         pygame.mixer.init()
         for channel_id, (file, _, _) in enumerate(Config.CHANNELS):
-            sound = pygame.mixer.Sound(file + "-01.mp3")
+            chunk = 1
+            chunk_str = str(chunk) if chunk > 9 else "0" + str(chunk)
+            sound = pygame.mixer.Sound(file + "-" + chunk_str + ".mp3")
             channel = pygame.mixer.Channel(channel_id)
             channel.set_endevent(pygame.USEREVENT + channel_id)
             channel.play(sound)
@@ -116,31 +118,31 @@ class LocalMusicStreamer(Streamer):
             play = channel_state.get_playing()
             timestamp = channel_state.get_timestamp()
             chunk = 1
+            delay = abs(timestamp - self.get_current_time(channel_id))
             while timestamp > Config.CHANNELS[channel_id][2]:
                 timestamp -= Config.CHANNELS[channel_id][2]
                 chunk += 1
             channel = pygame.mixer.Channel(channel_id)
-            if self.playing[channel_id] and not play:
+            if delay > Config.TOLERABLE_DELAY:
                 self.current_chunk_index[channel_id] = chunk
-                self.current_chunk_timestamp[channel_id] = timestamp
-                channel.pause()
-            elif not self.playing[channel_id] and play:
-                self.current_chunk_index[channel_id] = chunk
-                self.current_chunk_timestamp[channel_id] = timestamp
-                channel.unpause()
-                self.current_chunk_realtime[channel_id] = time()
-            elif abs(timestamp - self.get_current_time(channel_id)) > Config.TOLERABLE_DELAY:
-                self.current_chunk_index[channel_id] = chunk
-                self.current_chunk_timestamp[channel_id] = 0.0 # timestamp
+                self.current_chunk_timestamp[channel_id] = 0.0
                 file = Config.CHANNELS[channel_id][0]
                 chunk_str = str(chunk) if chunk > 9 else "0" + str(chunk)
                 sound = pygame.mixer.Sound(file + "-" + chunk_str + ".mp3")
                 channel = pygame.mixer.Channel(channel_id)
+                channel.set_endevent(pygame.USEREVENT + len(Config.CHANNELS))
                 channel.play(sound)
-                if self.playing[channel_id]:
+                if play:
                     self.current_chunk_realtime[channel_id] = time()
                 else:
                     channel.pause()
+                channel.set_endevent(pygame.USEREVENT + channel_id)
+            elif self.playing[channel_id] and not play:
+                channel.pause()
+                self.current_chunk_timestamp[channel_id] = time() - self.current_chunk_realtime[channel_id]
+            elif not self.playing[channel_id] and play:
+                channel.unpause()
+                self.current_chunk_realtime[channel_id] = time()
             self.playing[channel_id] = play
 
     def shutdown(self):
