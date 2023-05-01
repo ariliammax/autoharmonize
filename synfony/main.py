@@ -6,14 +6,18 @@ from multiprocessing import Process
 from socket import AF_INET, SHUT_RDWR, SOCK_STREAM, socket
 from synfony.config import Config
 from synfony.enums import EventCode, OperationCode
-from synfony.models import BaseEvent, PauseEvent, PlayEvent, SeekEvent
-from synfony.models import ChannelState, consensus
+from synfony.models import BaseEvent, \
+                           NoneEvent, \
+                           PauseEvent, \
+                           PlayEvent, \
+                           SeekEvent
+from synfony.models import ChannelState
 from synfony.models import MachineAddress
 from synfony.models import IdentityRequest, IdentityResponse
 from synfony.models import HeartbeatRequest, HeartbeatResponse
 from synfony.ui import UI
 from threading import Thread
-from typing import List, Tuple
+from typing import Callable, List, Tuple
 
 
 import threading
@@ -97,7 +101,9 @@ def listen_client(idx, connection):
 
 def metronome(other_sockets: List[socket],
               state: ChannelState,
-              events: List[BaseEvent]):
+              events: List[BaseEvent],
+              ui_manager: UI,
+              choice_func: Callable = ChannelState.choice_func):
     """Share and reach consensus about `state`, so we can pass it to the
         `LocalMusicStreamer`.
 
@@ -127,24 +133,25 @@ def metronome(other_sockets: List[socket],
                        if (machine is not None and
                            machine.get_status())]
 
-    # TODO: get from UI when it is exposed
-    #       something like `ui_manager.streamer.yada`
-    channel_state = ChannelState(
-        idx=0,
-        timestamp=0,
-        playing=False,
-        volume=0
-    )
-
-    # TODO: get events from UI when it is exposed, and deduce which is the
-    #       most recent etc.
-    event = PauseEvent(
-        channel_state=channel_state,
-        realtime=0
-    )
+    latest_events = \
+        [[event for event in ui_manager.event_queue[::-1]
+          if event.get_channel_state().get_idx() == idx]
+         for idx in range(ui_manager.streamer.get_num_channels())]
+    ui_manager.event_queue.clear()
+    channel_events_states = \
+        [latest_events[idx][0] if len(latest_events[idx]) > 0 else NoneEvent()
+         for idx in range(ui_manager.streamer.get_num_channels())]
+    [event.set_channel_state(
+        ChannelState(
+            idx=idx,
+            timestamp=ui_manager.streamer.get_current_time(idx),
+            playing=ui_manager.streamer.is_playing(idx),
+            volume=ui_manager.streamer.get_volume(idx)
+        )
+     ) for idx, event in enumerate(channel_event_states)]
 
     request = HeartbeatRequest(
-        channel_events_states=[event],
+        channel_events_states=channel_events_states,
         machine_addresses=machine_addresses,
         sent_timestamp=start_t_ms
     )
@@ -160,19 +167,23 @@ def metronome(other_sockets: List[socket],
                 break
             except:
                 pass
-        # TODO: lock
+        # TODO: locking
         other_machine_addresses[i].set_status(status)
-    # TODO: start threads
+    send_threads = [threading.Thread(target=impl_send_state,
+                                     args=[other_socket, i, request_b])
+                    for i, other_socket in enumerate(other_sockets)]
+    [thread.start() for thread in send_threads]
 
     # 2 - pull off queue, wait until acceptable
     def message_queues_empty():
+        # TODO: add message queues to `listen_client`
         return False
 
     while (time.time() - start_t < Config.HEARTBEAT_TIMEOUT and
            message_queues_empty()):
         time.sleep(Config.HANDSHAKE_TIMEOUT)
 
-    # TODO: join threads from before
+    [thread.join() for thread in send_threads]
 
     votes: List[HeartbeatRequest] = []
     for i, queue in enumerate(machine_message_queues):
@@ -188,21 +199,20 @@ def metronome(other_sockets: List[socket],
     all_channel_idxes = {event.get_channel_state().get_idx()
                          for vote in votes
                          for event in vote.get_channel_events_states()}
-
-    # TODO: update channel states in `ui_manager`
-    for channel_idx in all_channel_idxes:
-        new_channel_state = consensus([event
-                                       for vote in votes
-                                       for event in
-                                       vote.get_channel_events_states()
-                                       if (event.get_channe_state()
-                                           .get_idx() == channel_idx)])
-    # TODO: call `ui.manager.streamer.sync(...)`
+    ui_manager.streamer.sync(
+        [choice_func([event
+                      for vote in votes
+                      for event in vote.get_channel_events_states()
+                      if event.get_channe_state().get_idx() == channel_idx])
+         for channel_idx in all_channel_idxes]
+    )
 
     # 4 - schedule next
     # TODO: correct arguments...
     timer = threading.Timer(interval=(Config.HANDSHAKE_INTERVAL - start_t),
-                            function=handshake)
+                            function=handshake,
+                            args=[],
+                            kwargs={})
     timer.start()
 
 
@@ -260,7 +270,9 @@ def main(idx: int, machines: List[str]):
                     break
                 except:
                     continue
-        UI().init()
+        ui_manager = UI()
+        ui_manager.init()
+        # TODO: pass this somewhere
     except Exception as e:
         handler(e=e, s=s)
     finally:

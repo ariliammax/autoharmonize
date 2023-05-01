@@ -1,6 +1,10 @@
 from synfony.models import PauseEvent, PlayEvent, SeekEvent
 from synfony.models import ChannelState
 
+
+# TODO: add volume to all of these channel states... and a volume callback
+
+
 def playButtonTapped(channel_idx, timestamp, is_playing, event_queue, streamer):
     if is_playing:
         print('Play Pressed')
@@ -31,6 +35,7 @@ def playButtonTapped(channel_idx, timestamp, is_playing, event_queue, streamer):
     )
     return event_queue
 
+
 def didSeekTo(channel_idx, seek_value, is_playing, event_queue, streamer):
     print('Did seek to: ' + str(seek_value))
     event_queue.append(SeekEvent(
@@ -50,6 +55,7 @@ def didSeekTo(channel_idx, seek_value, is_playing, event_queue, streamer):
         ]
     )
     return event_queue
+
 
 def didChangeVolumeTo(channel_idx, seek_value, is_playing, event_queue, streamer):
     print('Did change volume to: ' + str(seek_value))

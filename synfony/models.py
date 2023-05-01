@@ -17,30 +17,6 @@ MachineAddress = Model.model_with_fields(
     status=bool
 )
 
-# this is the state which must reach consensus.
-# we don't do so through a strict equality, but rather there is a deterministic
-# choice function from a bunch of states
-ChannelState = Model.model_with_fields(
-    idx=int,
-    timestamp=int,
-    playing=bool,
-    # TODO: loading / buffering?
-    volume=int
-)
-
-DEFAULT_CHANNEL_STATE = ChannelState(
-    idx=0,
-    timestamp=0,
-    playing=False,
-    volume=100
-)
-
-
-# there is a global consensus of the channel "state", but that may be
-# slightly modified on each machine (i.e. through mixing)
-MixedChannelState = ChannelState.add_fields(
-    muted=bool,
-)
 
 class BaseEvent(Model.model_with_fields(event_code=int)):
     """the basic data model of the `Event`s. Like operations, we will have to
@@ -72,6 +48,8 @@ class BaseEvent(Model.model_with_fields(event_code=int)):
         """
         event_code = EventCode(BaseEvent.peek_event_code(data))
         match event_code:
+            case EventCode.NONE:
+                return super(BaseEvent, NoneEvent).deserialize(data)
             case EventCode.PAUSE:
                 return super(BaseEvent, PauseEvent).deserialize(data)
             case EventCode.PLAY:
@@ -121,6 +99,91 @@ class BaseEvent(Model.model_with_fields(event_code=int)):
         return __impl_class__
 
 
+class ChannelState(Model.model_with_fields(
+                           idx=int,
+                           timestamp=int,
+                           playing=bool,
+                           # TODO: loading / buffering?
+                           volume=int
+                       )
+                   ):
+    """this is the state which must reach consensus.
+        we don't do so through a strict equality, but rather there is a
+        deterministic choice function from a bunch of states.
+    """
+
+    @staticmethod
+    def choice_func(channel_idx: int, channel_events_states: List[BaseEvent]):
+        """Reach consensus of what the global channel states are,
+            from each of the machine states from sent.
+
+            Roughly, the protocol is:
+                1 - time which is latest is inherited in the updated state
+                    there is an important exception: if the further time along
+                    is from a not playing and there are playing, then ignore.
+                    Otherwise, seeks will cascade from not playing scheduled.
+
+                2 - pausing takes precedence over playing over seeking
+
+                3 - conflicting seeks go to the furthest along
+        """
+        if len(channel_events_states) == 0:
+            return DEFAULT_CHANNEL_STATE
+
+        ordered_states = [state for state in channel_events_states]
+        ordered_states.sort(key=lambda state: -1 * state.get_timestamp())
+
+        any_pause = len([state for state in ordered_states
+                         if state.get_event_code() == EventCode.PAUSE.value]) > 0
+
+        any_play = len([state for state in ordered_states
+                        if state.get_event_code() == EventCode.PLAY.value]) > 0
+
+        any_playing = len([state for state in ordered_states
+                           if state.get_playing()]) > 0
+
+        seek_idxes = [i for i, state in enumerate(ordered_states)
+                      if state.get_event_code() == EventCode.SEEK.value]
+        any_seek = len(seek_idxes) > 0
+        if not any_seek and not any_playing:
+            seek_idxes = [0]
+        if not any_seek:
+            seek_idxes = [i for i, state in enumerate(ordered_states)
+                          if state.get_playing()]
+
+        vol_idxes = [i for i, state in enumerate(ordered_states)
+                     if state.get_event_code() == EventCode.VOLUME.value]
+        any_vol = len(vol_idxes) > 0
+        if not any_vol:
+            vol_idxes = [0]
+
+        return ChannelState(
+            idx=channel_idx,
+            timestamp=ordered_states[seek_idxes[0]].get_timestamp(),
+            playing=(False if any_pause else (any_play or any_playing)),
+            volume=ordered_states[vol_idxes[0]].get_volume()
+        )
+
+DEFAULT_CHANNEL_STATE = ChannelState(
+    idx=0,
+    timestamp=0,
+    playing=False,
+    volume=100
+)
+
+
+# there is a global consensus of the channel "state", but that may be
+# slightly modified on each machine (i.e. through mixing)
+MixedChannelState = ChannelState.add_fields(
+    muted=bool,
+)
+
+
+NoneEvent = BaseEvent.add_fields_with_event_code(
+    channel_state=ChannelState,
+    event_code=EventCode.NONE
+)
+
 PauseEvent = BaseEvent.add_fields_with_event_code(
     channel_state=ChannelState,
     event_code=EventCode.PAUSE
@@ -129,14 +192,14 @@ PauseEvent = BaseEvent.add_fields_with_event_code(
 
 PlayEvent = BaseEvent.add_fields_with_event_code(
     channel_state=ChannelState,
-    realtime=int,
+    # realtime=int, TODO?
     event_code=EventCode.PLAY
 )
 
 
 SeekEvent = BaseEvent.add_fields_with_event_code(
     channel_state=ChannelState,
-    realtime=int,
+    # realtime=int, TODO ?
     event_code=EventCode.SEEK
 )
 
@@ -145,52 +208,6 @@ VolumeEvent = BaseEvent.add_fields_with_event_code(
     channel_state=ChannelState,
     event_code=EventCode.VOLUME
 )
-
-
-def consensus(channel_idx: int, channel_events_states: List[BaseEvent]):
-    """Reach consensus of what the global channel states are,
-        from each of the machine states from sent.
-
-        Roughly, the protocol is:
-            1 - time which is latest is inherited in the updated state
-                
-            2 - pausing takes precedence over playing over seeking
-
-            3 - conflicting seeks go to the furthest along
-    """
-    if len(channel_events_states) == 0:
-        return DEFAULT_CHANNEL_STATE
-
-    ordered_states = [state for state in channel_events_states]
-    ordered_states.sort(key=lambda state: -1 * state.get_timestamp())
-
-    any_pause = len([state for state in ordered_states
-                     if state.event_code == EventCode.PAUSE.value]) > 0
-
-    any_play = len([state for state in ordered_states
-                    if state.event_code == EventCode.PLAY.value]) > 0
-
-    any_playing = len([state for state in ordered_states
-                       if state.playing]) > 0
-
-    seek_idxes = [i for i, state in enumerate(ordered_states)
-                  if state.event_code == EventCode.SEEK.value]
-    any_seek = len(seek_idxes) > 0
-    if not any_seek:
-        seek_idxes = [0]
-
-    vol_idxes = [i for i, state in enumerate(ordered_states)
-                 if state.event_code == EventCode.VOLUME.value]
-    any_vol = len(vol_idxes) > 0
-    if not any_vol:
-        vol_idxes = [0]
-
-    return ChannelState(
-        idx=channel_idx,
-        timestamp=ordered_states[seek_idxes[0]].get_timestamp(),
-        playing=(False if any_pause else (any_play or any_playing)),
-        volume=ordered_states[vol_idxes[0]].get_volume()
-    )
 
 
 # OBJECT MODELS

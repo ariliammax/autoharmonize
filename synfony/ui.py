@@ -7,6 +7,7 @@ from synfony.streamer import LocalMusicStreamer
 
 import pygame
 
+
 def stringify_time(time):
   minutes = int(time // 60)
   seconds = int(time - (minutes * 60))
@@ -15,6 +16,7 @@ def stringify_time(time):
   else:
     return str(minutes) + ":" + str(seconds)
 
+
 def stringify_volume(volume):
     if (volume == 0):
         return "MUTED"
@@ -22,6 +24,7 @@ def stringify_volume(volume):
         return "MAX"
     else:
         return str(int(volume))
+
 
 class Button():
     def __init__(self, ui, x, y, width, height, txt, selectedTxt, isSelectedFunction=None, onclickFunction=None):
@@ -83,6 +86,7 @@ class Button():
             self.buttonRect.height/2 - self.buttonSurf.get_rect().height/2
         ])
         self.ui.screen.blit(self.buttonSurface, self.buttonRect)
+
 
 class Picker:
     def __init__(self, ui, x, y, width, height, initial_value, min_value, max_value, onchange_function=None):
@@ -155,6 +159,7 @@ class Picker:
     
     def process(self, streamer):
       self.ui.screen.blit(self.value_surface, self.value_rect)
+
 
 class SeekSlider():
     def __init__(self, ui, x, y, width, height, min_val, get_max_val, get_current_val, stringify, onchangeFunction=None):
