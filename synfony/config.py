@@ -18,7 +18,6 @@ class Config:
                 'localhost:20020',
                 'localhost:30020']
     STR_MAX_LEN = 280
-    TIMEOUT = 2
     TOLERABLE_DELAY = 0.1
 
     HANDSHAKE_TIMEOUT = 0.1

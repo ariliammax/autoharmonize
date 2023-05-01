@@ -31,7 +31,8 @@ ChannelState = Model.model_with_fields(
 DEFAULT_CHANNEL_STATE = ChannelState(
     idx=0,
     timestamp=0,
-    playing=False
+    playing=False,
+    volume=100
 )
 
 
@@ -77,6 +78,8 @@ class BaseEvent(Model.model_with_fields(event_code=int)):
                 return super(BaseEvent, PlayEvent).deserialize(data)
             case EventCode.SEEK:
                 return super(BaseEvent, SeekEvent).deserialize(data)
+            case EventCode.VOLUME:
+                return super(BaseEvent, VolumeEvent).deserialize(data)
             case _:
                 raise NotImplementedError()
 
@@ -138,6 +141,12 @@ SeekEvent = BaseEvent.add_fields_with_event_code(
 )
 
 
+VolumeEvent = BaseEvent.add_fields_with_event_code(
+    channel_state=ChannelState,
+    event_code=EventCode.VOLUME
+)
+
+
 def consensus(channel_idx: int, channel_events_states: List[BaseEvent]):
     """Reach consensus of what the global channel states are,
         from each of the machine states from sent.
@@ -152,7 +161,7 @@ def consensus(channel_idx: int, channel_events_states: List[BaseEvent]):
     if len(channel_events_states) == 0:
         return DEFAULT_CHANNEL_STATE
 
-    ordered_states = [state for state in channel_states]
+    ordered_states = [state for state in channel_events_states]
     ordered_states.sort(key=lambda state: -1 * state.get_timestamp())
 
     any_pause = len([state for state in ordered_states
@@ -167,14 +176,20 @@ def consensus(channel_idx: int, channel_events_states: List[BaseEvent]):
     seek_idxes = [i for i, state in enumerate(ordered_states)
                   if state.event_code == EventCode.SEEK.value]
     any_seek = len(seek_idxes) > 0
-
     if not any_seek:
         seek_idxes = [0]
+
+    vol_idxes = [i for i, state in enumerate(ordered_states)
+                 if state.event_code == EventCode.VOLUME.value]
+    any_vol = len(vol_idxes) > 0
+    if not any_vol:
+        vol_idxes = [0]
 
     return ChannelState(
         idx=channel_idx,
         timestamp=ordered_states[seek_idxes[0]].get_timestamp(),
-        playing=(False if any_pause else (any_play or any_playing))
+        playing=(False if any_pause else (any_play or any_playing)),
+        volume=ordered_states[vol_idxes[0]].get_volume()
     )
 
 
