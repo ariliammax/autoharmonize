@@ -117,6 +117,7 @@ class LocalMusicStreamer(Streamer):
             channel_id = channel_state.get_idx()
             play = channel_state.get_playing()
             timestamp = channel_state.get_timestamp()
+            volume = channel_state.get_volume()
             chunk = 1
             delay = abs(timestamp - self.get_current_time(channel_id))
             while timestamp > Config.CHANNELS[channel_id][2]:
@@ -144,6 +145,8 @@ class LocalMusicStreamer(Streamer):
                 channel.unpause()
                 self.current_chunk_realtime[channel_id] = time()
             self.playing[channel_id] = play
+            self.volume[channel_id] = volume
+            channel.set_volume(volume)
 
     def shutdown(self):
         pygame.mixer.stop()
