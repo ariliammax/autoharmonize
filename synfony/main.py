@@ -6,8 +6,11 @@ from multiprocessing import Process
 from socket import AF_INET, SOCK_STREAM, socket
 from synfony.config import Config
 from synfony.enums import EventCode, OperationCode
-from synfony.models import ChannelState, consensus
 from synfony.models import BaseEvent, PauseEvent, PlayEvent, SeekEvent
+from synfony.models import ChannelState, consensus
+from synfony.models import MachineAddress
+from synfony.models import IdentityRequest, IdentityResponse
+from synfony.models import HeartbeatRequest, HeartbeatResponse
 from synfony.ui import initUI
 from threading import Thread
 from typing import List, Tuple
@@ -53,23 +56,46 @@ def accept_clients(other_machine_addresses, s: socket):
         The startup protocol is:
             1 - connect
             2 - send `IdentityRequest`s
-            3 - TODO: send `AddressRequest`s for joining
     """
     while True:
+        # 1
         connection, _ = s.accept()
-        Thread(target=listen_client, args=(connection,)).start()
+
+        # 2 - `IdentityRequest`
+        while True:
+            try:
+                request_data = connection.recv(Config.PACKET_MAX_LEN)
+                if (IdentityRequest.peek_event_code(request_data) !=
+                        EventCode.IdentityRequest):
+                    continue
+                request = IdentityRequest.deserialize(request_data)
+                machine_address = request.get_machine_address()
+                # TODO lock
+                if machine_address.get_idx() >= len(other_machine_addresses):
+                    while (machine_address.get_idx() <
+                           len(other_machine_addresses)):
+                        other_machines_addresses.append(None)
+                other_machine_addresses[machine_address.get_idx()] = \
+                    machine_address
+                # TODO: join that new address...maybe send it over that
+                # socket instead...
+                # TODO: update timeout times for handshaking
+                break
+            except:
+                pass
 
 
-def listen_client(connection):
+def listen_client(idx, connection):
     """For continued listening on a client, where the handshakes are received.
     """
     while True:
-        _ = connection.recv(Config.INT_LEN)
+        # TODO: add to a queue for processing by the handshake event
+        _ = connection.recv(Config.PACKET_MAX_LEN)
 
 
-def handshake(other_sockets: List[socket],
-              state: ChannelState,
-              events: List[BaseEvent]):
+def metrosexual(other_sockets: List[socket],
+                state: ChannelState,
+                events: List[BaseEvent]):
     """Share and reach consensus about `state`, so we can pass it to the
         `LocalMusicStreamer`.
 
@@ -89,6 +115,18 @@ def handshake(other_sockets: List[socket],
         are timing out in `Config.HANDSHAKE_TIMEOUT`, whcih are much faster
         than `Config.HEARTBEAT_TIMEOUT`.
     """
+    # TODO: locking
+    machine_addresses=[machine
+                       for i, machine in
+                       enumerate(other_machine_addresses)
+                       if machine is not None]
+
+    # TODO: 1 - send
+
+    # TODO: 2 - pull off queue, wait until acceptable
+    # TODO: failures for next state
+    # TODO: 3 - consensus
+    # TODO: 4 - schedule next
     pass
 
 
@@ -103,6 +141,10 @@ def handler(e, s: socket):
 def main(idx: int, machines: List[str]):
     """Start the connections and what not.
     """
+    # machine_addresses = [MachineAddress(
+    #                          host=machine[0],
+    #                          idx=-1,
+    #                          port=machine[1])]
     s = socket(AF_INET, SOCK_STREAM)
     try:
         machine_address = machines[idx]
@@ -111,14 +153,17 @@ def main(idx: int, machines: List[str]):
         s.listen()
         s.settimeout(None)
         time.sleep(Config.TIMEOUT)
+        # this should be `machine_addresses: List[MachineAddress]`
         Thread(target=accept_clients,
                args=(other_machine_addresses, s)).start()
+        # TODO: start timer for handshake
         time.sleep(Config.TIMEOUT)
         other_sockets = []
         for other_machine_address in other_machine_addresses:
             other_socket = socket(AF_INET, SOCK_STREAM)
             other_socket.settimeout(None)  # TODO handshake timeout post start
             other_socket.connect(other_machine_address)
+            other_socket.sendall(IdentityRequest(idx=idx).serialize())
             other_sockets.append(other_socket)
         initUI()
     except Exception as e:

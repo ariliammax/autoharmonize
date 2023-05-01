@@ -9,6 +9,13 @@ from typing import Callable, Dict, List
 
 # DATA MODELS
 
+
+MachineAddress = Model.model_with_fields(
+    host=str,
+    idx=int,
+    port=int
+)
+
 # this is the state which must reach consensus.
 # we don't do so through a strict equality, but rather there is a deterministic
 # choice function from a bunch of states
@@ -317,10 +324,12 @@ class BaseResponse(BaseRequest.add_fields(error=str)):
 
 HeartbeatRequest = BaseRequest.add_fields_with_operation_code(
     channel_events_states=list,
+    machine_addresses=list,
     sent_timestamp=int,
     operation_code=OperationCode.HEARTBEAT,
     fields_list_nested=dict(
-        channel_events_states=BaseEvent
+        channel_events_states=BaseEvent,
+        machine_addresses=MachineAddress
     )
 )
 HeartbeatResponse = BaseResponse.add_fields_with_operation_code(
@@ -330,8 +339,9 @@ HeartbeatResponse = BaseResponse.add_fields_with_operation_code(
 
 IdentityRequest = BaseRequest.add_fields_with_operation_code(
     idx=int,
+    machine_address=MachineAddress,
     operation_code=OperationCode.IDENTITY
 )
 IdentityResponse = BaseResponse.add_fields_with_operation_code(
-    operation_code=OperationCode.IDENTITY
+    operation_code=OperationCode.IDENTITY,
 )

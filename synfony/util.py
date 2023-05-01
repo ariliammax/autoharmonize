@@ -8,6 +8,9 @@ from typing import Callable, Dict, List, Optional, Type
 import builtins
 
 
+...
+
+
 class Interface(object):
     """An abstract `interface` that will be used in e.g. `model_from_proto`
        to autogenerate the sort of useful code we would like.

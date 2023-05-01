@@ -56,3 +56,8 @@ majority-rule), but that seems a lil risky to implement (according to some team
 members), so we are opting for the more standard "handshake" consensus.
 
 ... YADA YADA ...
+
+
+#### Debugging notes
+
+- Fun pygame `malloc` error when seeking to a new chunk (!?)
