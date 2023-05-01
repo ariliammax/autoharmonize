@@ -237,6 +237,7 @@ def main(idx: int, machines: List[str]):
         # this should be `machine_addresses: List[MachineAddress]`
         threading.Thread(target=accept_clients,
                          args=(other_machine_addresses, s)).start()
+        time.sleep(Config.TOLERABLE_DELAY)
         # TODO: start timer for handshake
         other_sockets = []
         for other_machine_address in other_machine_addresses:
