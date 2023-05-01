@@ -55,12 +55,8 @@ class Button():
                 if not self.alreadyPressed:
                     self.alreadyPressed = True
                     self.onclickFunction(
-                        channel_idx=self.ui.channel, 
-                        timestamp=streamer.get_current_time(self.ui.channel),
-                        is_playing=streamer.is_playing(self.ui.channel),  
-                        volume=streamer.get_volume(self.ui.channel),
+                        channel_idx=self.ui.channel,
                         event_queue=self.ui.event_queue,
-                        is_selected=not self.isSelected, 
                         streamer=streamer
                     )
             else:
@@ -213,10 +209,7 @@ class SeekSlider():
                 # call the onchange function if it exists
                 if self.onchangeFunction is not None:
                      self.onchangeFunction(
-                        channel_idx=self.ui.channel, 
-                        timestamp = streamer.get_current_time(self.ui.channel), 
-                        is_playing=streamer.is_playing(self.ui.channel), 
-                        volume=streamer.get_volume(self.ui.channel),
+                        channel_idx=self.ui.channel,
                         event_queue=self.ui.event_queue,
                         seek_value=self.value,
                         streamer=streamer
