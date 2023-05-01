@@ -1,11 +1,10 @@
 from synfony.models import PauseEvent, PlayEvent, SeekEvent
 from synfony.models import ChannelState
 
-
-def playButtonTapped(channel_idx, timestamp, is_playing, eventQueue, streamer):
+def playButtonTapped(channel_idx, timestamp, is_playing, event_queue, streamer):
     if is_playing:
         print('Play Pressed')
-        eventQueue.append(PlayEvent(
+        event_queue.append(PlayEvent(
             channel_state = ChannelState(
                 idx=channel_idx,
                 timestamp=timestamp,
@@ -14,7 +13,7 @@ def playButtonTapped(channel_idx, timestamp, is_playing, eventQueue, streamer):
         ))
     else:
         print('Pause Pressed')
-        eventQueue.append(PauseEvent(
+        event_queue.append(PauseEvent(
             channel_state = ChannelState(
                 idx=channel_idx,
                 timestamp=timestamp,
@@ -30,14 +29,14 @@ def playButtonTapped(channel_idx, timestamp, is_playing, eventQueue, streamer):
             )
         ]
     )
-    return eventQueue
+    return event_queue
 
-def didSeekTo(channel_idx, seek_timestamp, is_playing, eventQueue, streamer):
-    print('Did seek to: ' + str(seek_timestamp))
-    eventQueue.append(SeekEvent(
+def didSeekTo(channel_idx, seek_value, is_playing, event_queue, streamer):
+    print('Did seek to: ' + str(seek_value))
+    event_queue.append(SeekEvent(
         channel_state = ChannelState(
             idx=channel_idx,
-            timestamp=seek_timestamp,
+            timestamp=seek_value,
             playing=is_playing
         )
     ))
@@ -45,9 +44,12 @@ def didSeekTo(channel_idx, seek_timestamp, is_playing, eventQueue, streamer):
         [
             ChannelState(
                 idx=channel_idx,
-                timestamp=seek_timestamp,
+                timestamp=seek_value,
                 playing=is_playing
             )
         ]
     )
-    return eventQueue
+    return event_queue
+
+def didChangeVolumeTo(channel_idx, seek_value, is_playing, event_queue, streamer):
+    print('Did change volume to: ' + str(seek_value))

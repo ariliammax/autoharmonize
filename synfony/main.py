@@ -11,7 +11,7 @@ from synfony.models import ChannelState, consensus
 from synfony.models import MachineAddress
 from synfony.models import IdentityRequest, IdentityResponse
 from synfony.models import HeartbeatRequest, HeartbeatResponse
-from synfony.ui import initUI
+from synfony.ui import UI
 from threading import Thread
 from typing import List, Tuple
 
@@ -205,7 +205,7 @@ def main(idx: int, machines: List[str]):
             other_socket.connect(other_machine_address)
             # other_socket.sendall(IdentityRequest(idx=idx).serialize())
             other_sockets.append(other_socket)
-        initUI()
+        UI().init()
     except Exception as e:
         handler(e=e, s=s)
     finally:
