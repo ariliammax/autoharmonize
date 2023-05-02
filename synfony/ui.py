@@ -171,7 +171,7 @@ class SeekSlider():
         self.onchangeFunction = onchangeFunction
         self.isDragging = False
         self.stringify = stringify
-        self.font = pygame.font.SysFont('Arial', 25)
+        self.font = pygame.font.SysFont('Arial', 20)
 
         self.fillColors = {
             'background': '#232323',
@@ -207,7 +207,7 @@ class SeekSlider():
 
         #draw right label
         self.rightLabelSurface = self.font.render(self.stringify(self.max_val), True, (255, 255, 255))
-        self.rightLabelRect = self.leftLabelSurface.get_rect()
+        self.rightLabelRect = self.rightLabelSurface.get_rect()
 
         if (self.height > self.width):
             # Vertical
@@ -216,10 +216,10 @@ class SeekSlider():
             pygame.draw.rect(self.sliderSurface, self.fillColors['bar'], barRect)
             knobRect = pygame.Rect(0, knob_pos, self.width, self.width)
             pygame.draw.rect(self.sliderSurface, self.fillColors['knob'], knobRect, 0, 25)
-            self.leftLabelRect.x = self.sliderRect.width / 2
+            self.leftLabelRect.centerx = (self.sliderRect.width) / 2 + 15
             self.leftLabelRect.y = self.y + self.height
-            self.rightLabelRect.x =  self.sliderRect.width / 2 - self.rightLabelRect.width / 2
-            self.rightLabelRect.y = self.y - 30
+            self.rightLabelRect.centerx = (self.sliderRect.width) / 2 + 15
+            self.rightLabelRect.y = self.y - 23
         else:
             # Horizontal
             knob_pos = int(((self.value - self.min_val) / range) * (self.width - self.height))
