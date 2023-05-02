@@ -330,7 +330,7 @@ def main(idx: int, machines: List[str]):
 
     Thread(target=networking,
            args=[idx, machine_addresses, ui_manager]).start()
-    ui_manager.init()
+    ui_manager.init(idx)
 
 
 if __name__ == '__main__':

@@ -2,8 +2,14 @@
 # in synfony
 
 from synfony.callbacks import *
-from synfony.config import UIConfig
-from synfony.streamer import AllStreamer, LocalMusicStreamer, Streamer
+from synfony.config import Config, UIConfig
+from synfony.streamer import (
+    AllStreamer,
+    LocalMusicStreamer,
+    RemoteMusicStream,
+    RemoteMusicStreamer,
+    Streamer
+)
 
 import math
 import pygame
@@ -324,10 +330,17 @@ class UI():
     screen = pygame.display.set_mode((UIConfig.SCREEN_WIDTH, UIConfig.SCREEN_HEIGHT))
     is_loading = False
 
-    def init(self):
+    def init(self, machine_id):
+        self.machine_id = machine_id
         pygame.init()
 
-        streamers = [LocalMusicStreamer(i) for i in range(Streamer.get_num_channels())]
+        #RemoteMusicStream(machine_id)
+        streamers = []
+        for i in range(Streamer.get_num_channels()):
+            if True or i in Config.STREAMS[self.machine_id][1]:
+                streamers.append(LocalMusicStreamer(i))
+            else:
+                streamers.append(RemoteMusicStreamer(i))
         streamers.append(AllStreamer(list(streamers)))
         Streamer.init()
 

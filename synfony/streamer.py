@@ -2,9 +2,10 @@
 # in synfony
 
 from abc import ABC, abstractmethod
+from socket import AF_INET, SOCK_STREAM, socket
 from synfony.config import Config
 from synfony.models import ChannelState
-from threading import Timer
+from threading import Thread, Timer
 from time import time
 
 import pygame
@@ -249,5 +250,69 @@ class LocalMusicStreamer(Streamer):
         channel.set_volume(volume)
 
 
-class RemoteMusicStreamer(Streamer):
-    pass
+class RemoteMusicStream():
+    def accept(self):
+        s = socket(AF_INET, SOCK_STREAM)
+        s.settimeout(None)
+        machine_address = Config.STREAMS[self.machine_id][0].split(":")
+        machine_address[1] = int(machine_address[1])
+        machine_address = tuple(machine_address)
+        s.bind(machine_address)
+        s.listen()
+        while True:
+            try:
+                connection, _ = s.accept()
+                Thread(target=self.recv, args=[connection]).start()
+            except:
+                pass
+
+    def recv(self, connection):
+        while True:
+            try:
+                response = connection.recv(Config.PACKET_MAX_LEN)
+                if len(response) == 0:
+                    break
+                print(response)
+                connection.send(b"GOODBYE")
+            except:
+                pass
+
+    def __init__(self, machine_id):
+        self.machine_id = machine_id
+        Thread(target=self.accept).start()
+
+
+class RemoteMusicStreamer(LocalMusicStreamer):
+    def connect(self):
+        while True:
+            try:
+                s = socket(AF_INET, SOCK_STREAM)
+                s.settimeout(None)
+                machine_address = Config.STREAMS[self.machine_id][0].split(":")
+                machine_address[1] = int(machine_address[1])
+                machine_address = tuple(machine_address)
+                s.connect(machine_address)
+                s.sendall(b"HELLO 1")
+                response = s.recv(Config.PACKET_MAX_LEN)
+                print(response)
+                s.sendall(b"HELLO 2")
+                response = s.recv(Config.PACKET_MAX_LEN)
+                print(response)
+                break
+            except:
+                pass
+
+    def __init__(self, channel_id):
+        self.channel_id = channel_id
+        self.downloaded = [False for _ in range(Config.CHANNELS[channel_id][1])]
+        self.machine_id = None
+        for i in range(len(Config.MACHINES)):
+            if channel_id in Config.STREAMS[i][1]:
+                self.machine_id = i
+        super().__init__(channel_id)
+        Thread(target=self.connect).start()
+
+    def get_chunk(self, chunk):
+        if not self.downloaded[chunk]:
+            return None
+        return super().get_chunk(chunk)
