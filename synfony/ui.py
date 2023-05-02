@@ -16,75 +16,75 @@ import pygame
 
 
 class Button():
-    def __init__(self, ui, x, y, width, height, txt, selectedTxt, streamers, onclickFunction=None):
+    def __init__(self, ui, x, y, width, height, txt, selected_txt, streamers, on_click_function=None):
         self.ui = ui
         self.x = x
         self.y = y
         self.width = width
         self.height = height
-        self.onclickFunction = onclickFunction
-        self.alreadyPressed = False
-        self.isSelected = False
+        self.on_click_function = on_click_function
+        self.already_pressed = False
+        self.is_selected = False
         self.streamers = streamers
         self.txt = txt
-        self.selectedTxt = selectedTxt
+        self.selected_txt = selected_txt
         self.font = pygame.font.SysFont('Arial', 30)
 
-        self.fillColors = {
+        self.fill_colors = {
             'normal': '#3498db',
             'hover': '#2980b9',
             'pressed': '#2980b9',
         }
         
-        self.buttonSurface = pygame.Surface((self.width, self.height))
-        self.buttonRect = pygame.Rect(self.x, self.y, self.width, self.height)
+        self.button_surface = pygame.Surface((self.width, self.height))
+        self.button_rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
-        self.buttonSurf = self.font.render("Play", True, (255, 255, 255))
+        self.button_surf = self.font.render("Play", True, (255, 255, 255))
         self.ui.objects.append(self)
         
     def process(self):
         mousePos = pygame.mouse.get_pos()
-        self.buttonSurface.fill(self.fillColors['normal'])
+        self.button_surface.fill(self.fill_colors['normal'])
 
         # Set the state of the button
-        self.isSelected = self.streamers[self.ui.channel].is_playing()
+        self.is_selected = self.streamers[self.ui.channel].is_playing()
 
-        if (self.isSelected):
-            self.buttonSurf = self.font.render(self.selectedTxt, True, (255, 255, 255))
+        if (self.is_selected):
+            self.button_surf = self.font.render(self.selected_txt, True, (255, 255, 255))
         else:
-            self.buttonSurf = self.font.render(self.txt, True, (255, 255, 255))
+            self.button_surf = self.font.render(self.txt, True, (255, 255, 255))
 
         if not self.ui.is_loading:
-            if self.buttonRect.collidepoint(mousePos):
-                self.buttonSurface.fill(self.fillColors['hover'])
+            if self.button_rect.collidepoint(mousePos):
+                self.button_surface.fill(self.fill_colors['hover'])
                 if pygame.mouse.get_pressed(num_buttons=3)[0]:
-                    self.buttonSurface.fill(self.fillColors['pressed'])
-                    if not self.alreadyPressed:
-                        self.alreadyPressed = True
+                    self.button_surface.fill(self.fill_colors['pressed'])
+                    if not self.already_pressed:
+                        self.already_pressed = True
                         if Config.HANDSHAKE_ENABLED:
                             self.ui.start_loading()
-                        self.onclickFunction(
+                        self.on_click_function(
                             channel_idx=self.ui.channel,
                             event_queue=self.ui.event_queue,
                             streamer=self.streamers[self.ui.channel],
                         )
                 else:
-                    self.alreadyPressed = False
-        self.buttonSurface.blit(self.buttonSurf, [
-            self.buttonRect.width/2 - self.buttonSurf.get_rect().width/2,
-            self.buttonRect.height/2 - self.buttonSurf.get_rect().height/2
+                    self.already_pressed = False
+        self.button_surface.blit(self.button_surf, [
+            self.button_rect.width/2 - self.button_surf.get_rect().width/2,
+            self.button_rect.height/2 - self.button_surf.get_rect().height/2
         ])
-        self.ui.screen.blit(self.buttonSurface, self.buttonRect)
+        self.ui.screen.blit(self.button_surface, self.button_rect)
 
 
 class Picker:
-    def __init__(self, ui, x, y, width, height, initial_value, min_value, max_value, streamers, onchange_function=None):
+    def __init__(self, ui, x, y, width, height, initial_value, min_value, max_value, streamers, on_change_function=None):
         self.ui = ui
         self.x = x
         self.y = y
         self.width = width
         self.height = height
-        self.onchange_function = onchange_function
+        self.on_change_function = on_change_function
         self.already_pressed = False
         self.min_value = min_value
         self.max_value = max_value
@@ -141,8 +141,8 @@ class Picker:
                 self.x + self.width/2,
                 self.y + self.height/2
             )
-            if self.onchange_function is not None:
-                self.onchange_function(self.value)
+            if self.on_change_function is not None:
+                self.on_change_function(self.value)
 
     def _increment(self, **kwargs):
         if self.value < self.max_value:
@@ -154,15 +154,15 @@ class Picker:
                 self.x + self.width/2,
                 self.y + self.height/2
             )
-            if self.onchange_function is not None:
-                self.onchange_function(self.value)
+            if self.on_change_function is not None:
+                self.on_change_function(self.value)
     
     def process(self):
       self.ui.screen.blit(self.value_surface, self.value_rect)
 
 
 class SeekSlider():
-    def __init__(self, ui, x, y, width, height, streamers, get_val, get_max_val, stringify, onchangeFunction=None):
+    def __init__(self, ui, x, y, width, height, streamers, get_val, get_max_val, stringify, on_change_function=None):
         self.ui = ui
         self.x = x
         self.y = y
@@ -174,19 +174,19 @@ class SeekSlider():
         self.min_val = 0
         self.max_val = get_max_val(self.streamers[self.ui.channel])
         self.value = get_val(self.streamers[self.ui.channel])
-        self.onchangeFunction = onchangeFunction
-        self.isDragging = False
+        self.on_change_function = on_change_function
+        self.is_dragging = False
         self.stringify = stringify
         self.font = pygame.font.SysFont('Arial', 20)
 
-        self.fillColors = {
+        self.fill_colors = {
             'background': '#232323',
             'bar': '#ffffff',
             'knob': '#494949',
         }
 
-        self.sliderSurface = pygame.Surface((self.width, self.height))
-        self.sliderRect = pygame.Rect(self.x, self.y, self.width, self.height)
+        self.slider_surface = pygame.Surface((self.width, self.height))
+        self.slider_rect = pygame.Rect(self.x, self.y, self.width, self.height)
         ui.objects.append(self)
     
     def calculate_knob_pos(self):
@@ -199,54 +199,54 @@ class SeekSlider():
 
     def process(self):
         mousePos = pygame.mouse.get_pos()
-        self.sliderSurface.fill(self.fillColors['background'])
+        self.slider_surface.fill(self.fill_colors['background'])
 
         self.max_val = self.get_max_val(self.streamers[self.ui.channel])
         range = self.max_val - self.min_val
 
         #draw left label
         if (self.height > self.width):
-            self.leftLabelSurface = self.font.render(self.stringify(self.max_val - self.value), True, (255, 255, 255))
+            self.left_label_surface = self.font.render(self.stringify(self.max_val - self.value), True, (255, 255, 255))
         else:
-            self.leftLabelSurface = self.font.render(self.stringify(self.value), True, (255, 255, 255))
-        self.leftLabelRect = self.leftLabelSurface.get_rect()
+            self.left_label_surface = self.font.render(self.stringify(self.value), True, (255, 255, 255))
+        self.left_label_rect = self.left_label_surface.get_rect()
 
         #draw right label
-        self.rightLabelSurface = self.font.render(self.stringify(self.max_val), True, (255, 255, 255))
-        self.rightLabelRect = self.rightLabelSurface.get_rect()
+        self.right_label_surface = self.font.render(self.stringify(self.max_val), True, (255, 255, 255))
+        self.right_label_rect = self.right_label_surface.get_rect()
 
         if (self.height > self.width):
             # Vertical
             knob_pos = int(((self.value - self.min_val) / range) * (self.height - self.width))
-            barRect = pygame.Rect(self.width / 2 - 2, self.width / 2, 4, self.height - self.width)
-            pygame.draw.rect(self.sliderSurface, self.fillColors['bar'], barRect)
-            knobRect = pygame.Rect(0, knob_pos, self.width, self.width)
-            pygame.draw.rect(self.sliderSurface, self.fillColors['knob'], knobRect, 0, 25)
-            self.leftLabelRect.centerx = (self.sliderRect.width) / 2 + 15
-            self.leftLabelRect.y = self.y + self.height
-            self.rightLabelRect.centerx = (self.sliderRect.width) / 2 + 15
-            self.rightLabelRect.y = self.y - 23
+            bar_rect = pygame.Rect(self.width / 2 - 2, self.width / 2, 4, self.height - self.width)
+            pygame.draw.rect(self.slider_surface, self.fill_colors['bar'], bar_rect)
+            knob_rect = pygame.Rect(0, knob_pos, self.width, self.width)
+            pygame.draw.rect(self.slider_surface, self.fill_colors['knob'], knob_rect, 0, 25)
+            self.left_label_rect.centerx = (self.slider_rect.width) / 2 + 15
+            self.left_label_rect.y = self.y + self.height
+            self.right_label_rect.centerx = (self.slider_rect.width) / 2 + 15
+            self.right_label_rect.y = self.y - 23
         else:
             # Horizontal
             knob_pos = int(((self.value - self.min_val) / range) * (self.width - self.height))
-            barRect = pygame.Rect(self.height / 2, self.height / 2 - 2, self.width - self.height, 4)
-            pygame.draw.rect(self.sliderSurface, self.fillColors['bar'], barRect)
-            knobRect = pygame.Rect(knob_pos, 0, self.height, self.height)
-            pygame.draw.rect(self.sliderSurface, self.fillColors['knob'], knobRect, 0, 25)
-            self.leftLabelRect.x = self.x + 25
-            self.leftLabelRect.y = self.y - self.height + 20
-            self.rightLabelRect.x = self.x + self.width - self.rightLabelRect.width - 25
-            self.rightLabelRect.y = self.y - self.height + 20
+            bar_rect = pygame.Rect(self.height / 2, self.height / 2 - 2, self.width - self.height, 4)
+            pygame.draw.rect(self.slider_surface, self.fill_colors['bar'], bar_rect)
+            knob_rect = pygame.Rect(knob_pos, 0, self.height, self.height)
+            pygame.draw.rect(self.slider_surface, self.fill_colors['knob'], knob_rect, 0, 25)
+            self.left_label_rect.x = self.x + 25
+            self.left_label_rect.y = self.y - self.height + 20
+            self.right_label_rect.x = self.x + self.width - self.right_label_rect.width - 25
+            self.right_label_rect.y = self.y - self.height + 20
   
         # handle input
         if not self.ui.is_loading:
-            if self.sliderRect.collidepoint(mousePos):
+            if self.slider_rect.collidepoint(mousePos):
                 if pygame.mouse.get_pressed(num_buttons=3)[0]:
-                    self.isDragging = True
+                    self.is_dragging = True
                     # calculate the new value based on the position of the mouse
                     if (self.height > self.width):
                         # Vertical
-                        mouse_y = mousePos[1] - self.sliderRect.top - self.width / 2
+                        mouse_y = mousePos[1] - self.slider_rect.top - self.width / 2
                         new_value = (mouse_y / (self.height - self.width)) * range + self.min_val
                         new_value = max(min(new_value, self.max_val), self.min_val)
                         self.value = new_value
@@ -254,28 +254,28 @@ class SeekSlider():
                         knob_pos = int(((self.value - self.min_val) / range) * (self.height - self.value))
                     else:
                         # Horizontal
-                        mouse_x = mousePos[0] - self.sliderRect.left - self.height / 2
+                        mouse_x = mousePos[0] - self.slider_rect.left - self.height / 2
                         new_value = (mouse_x / (self.width - self.height)) * range + self.min_val
                         new_value = max(min(new_value, self.max_val), self.min_val)
                         self.value = new_value
                         # update the position of the knob based on the new value
                         knob_pos = int(((self.value - self.min_val) / range) * (self.width - self.height))
-                elif self.isDragging:
-                    self.isDragging = False
+                elif self.is_dragging:
+                    self.is_dragging = False
 
                     # call the onchange function if it exists
-                    if self.onchangeFunction is not None:
+                    if self.on_change_function is not None:
                         if Config.HANDSHAKE_ENABLED:
                             self.ui.start_loading()
                         if (self.height > self.width):
-                            self.onchangeFunction(
+                            self.on_change_function(
                                 channel_idx=self.ui.channel,
                                 event_queue=self.ui.event_queue,
                                 seek_value=self.max_val - self.value,
                                 streamer=self.streamers[self.ui.channel],
                             )
                         else:
-                             self.onchangeFunction(
+                             self.on_change_function(
                                 channel_idx=self.ui.channel,
                                 event_queue=self.ui.event_queue,
                                 seek_value=self.value,
@@ -289,16 +289,16 @@ class SeekSlider():
         # redraw the knob with its new position
         if (self.height > self.width):
             # Vertical
-            knobRect = pygame.Rect(0, knob_pos, self.width, self.width)
+            knob_rect = pygame.Rect(0, knob_pos, self.width, self.width)
         else:
             # Horizontal
-            knobRect = pygame.Rect(knob_pos, 0, self.height, self.height)
+            knob_rect = pygame.Rect(knob_pos, 0, self.height, self.height)
 
-        pygame.draw.rect(self.sliderSurface, self.fillColors['knob'], knobRect, 0, 25)
+        pygame.draw.rect(self.slider_surface, self.fill_colors['knob'], knob_rect, 0, 25)
 
-        self.ui.screen.blit(self.sliderSurface, self.sliderRect)
-        self.ui.screen.blit(self.leftLabelSurface, self.leftLabelRect)
-        self.ui.screen.blit(self.rightLabelSurface, self.rightLabelRect)
+        self.ui.screen.blit(self.slider_surface, self.slider_rect)
+        self.ui.screen.blit(self.left_label_surface, self.left_label_rect)
+        self.ui.screen.blit(self.right_label_surface, self.right_label_rect)
 
 class Loader:
     def __init__(self, ui, x, y, size, speed):
@@ -325,7 +325,7 @@ class Loader:
 class UI():
     channel = 0
     event_queue = []
-    fpsClock = pygame.time.Clock()
+    fps_clock = pygame.time.Clock()
     objects = []
     screen = pygame.display.set_mode((UIConfig.SCREEN_WIDTH, UIConfig.SCREEN_HEIGHT))
     streamers = []
@@ -344,7 +344,7 @@ class UI():
         self.streamers.append(AllStreamer(list(self.streamers)))
         Streamer.init()
 
-        Loader(self, UIConfig.SCREEN_WIDTH / 2 - 25, UIConfig.SCREEN_HEIGHT / 2 - 125, 50, 0.1)
+        Loader(self, UIConfig.SCREEN_WIDTH / 2 - 25, 50, 50, 0.1)
         Picker(self, 0, 0, UIConfig.SCREEN_WIDTH, 50, 0, 0, Streamer.get_num_channels(), self.streamers, None)
         SeekSlider(self, 15, UIConfig.SCREEN_HEIGHT / 2 - 150, 50, 300, self.streamers, (lambda s: s.get_volume()), (lambda s: 100), self.stringify_volume, didChangeVolumeTo)
         Button(self, UIConfig.SCREEN_WIDTH / 2 - 125, UIConfig.SCREEN_HEIGHT / 2 - 50, 250, 100, "Play", "Pause", self.streamers, playButtonTapped)
@@ -362,7 +362,7 @@ class UI():
             for object in self.objects:
                 object.process()
             pygame.display.flip()
-            self.fpsClock.tick(UIConfig.fps)
+            self.fps_clock.tick(UIConfig.fps)
     
     def stringify_time(self, time):
         minutes = int(time // 60)
