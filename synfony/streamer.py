@@ -320,7 +320,7 @@ class RemoteMusicStreamer(LocalMusicStreamer):
                 if False not in self.downloaded and len(self.queue) == 0:
                     break
                 i = self.downloaded.index(False) if len(self.queue) == 0 else self.queue[0]
-                if (i + self.channel_id) % Config.REMOTE_DELAY_LONG_FREQUENCY > 0:
+                if (i + self.channel_id + self.machine_id) % Config.REMOTE_DELAY_LONG_FREQUENCY > 0:
                     s.sendall(b"REQUEST-SHORT")
                 else:
                     s.sendall(b"REQUEST-LONG")
@@ -328,7 +328,7 @@ class RemoteMusicStreamer(LocalMusicStreamer):
                 if len(response) == 0:
                     break
                 self.downloaded[i] = True
-                self.queue = [j for j in range(len(self.queue)) if not self.downloaded[j]]
+                self.queue = [j for j in self.queue if not self.downloaded[j]]
             except:
                 pass
 
