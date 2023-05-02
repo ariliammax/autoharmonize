@@ -86,6 +86,8 @@ class Machine:
                 print('good msg from', idx, ' | ',
                       EventCode(request.get_channel_events_states()[0]
                                 .get_event_code()))
+                print('good msg from', idx, ' is\n\t',
+                      request.get_channel_events_states())
             except:
                 pass
 
@@ -210,11 +212,6 @@ class Machine:
             with cls._lock:
                 machine_message_queues[i].clear()
 
-        up_machines=[i
-                     for i, machine in enumerate(machine_addresses)
-                     if machine is not None and machine.get_status()]
-        print('msgs', my_idx, '| up_machines=', up_machines)
-
         # 3 - consensus + `ui_manager.streamer.sync(...)`; and
         #     increment the `._event._timestamp` by
         #     `time.time() - ._sent_timestamp` to account for network latency
@@ -224,7 +221,7 @@ class Machine:
         #      consensus (and is likely to be within tolerable range anyways).
         [event.get_channel_state().set_timestamp(
              event.get_channel_state().get_timestamp() +
-             time.time() - vote.get_sent_timestamp()
+             max(time.time() - vote.get_sent_timestamp(), 0)
          )
          for vote in votes
          for event in vote.get_channel_events_states()]
@@ -232,13 +229,18 @@ class Machine:
         all_channel_idxes = {event.get_channel_state().get_idx()
                              for vote in votes
                              for event in vote.get_channel_events_states()}
+        all_channel_idx_events = [
+            [event
+             for vote in votes
+             for event in vote.get_channel_events_states()
+             if event.get_channel_state().get_idx() == c_idx]
+            for c_idx in all_channel_idxes
+        ]
         [ui_manager.streamers[c_idx].sync(
-            choice_func([event
-                         for vote in votes
-                         for event in vote.get_channel_events_states()
-                         if event.get_channel_state().get_idx() == c_idx])
+            choice_func(events)
          )
-         for c_idx in all_channel_idxes]
+         for c_idx, events in enumerate(all_channel_idx_events)
+         if c_idx != len(ui_manager.streamers) - 1 or len(events) == 0]
         ui_manager.stop_loading()
 
         # 4 - schedule next

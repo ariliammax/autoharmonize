@@ -72,6 +72,11 @@ class Model(object):
                          f'{getattr(self, f"get_{n!s}", lambda: None)()!s}'
                          for n in self._fields])
 
+    def __repr__(self) -> str:
+        """Concatenates every field's `__str__`
+        """
+        return self.__str__()
+
     @staticmethod
     def default_deserializer(t: Type) -> Optional[Callable]:
         """The default deserializing function for a type. `None` if not
