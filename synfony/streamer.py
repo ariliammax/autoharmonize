@@ -192,7 +192,8 @@ class LocalMusicStreamer(Streamer):
             playing = channel_state.get_playing()
             timestamp = channel_state.get_timestamp()
             volume = channel_state.get_volume()
-            self.last_timestamp = channel_state.get_last_timestamp()  # ?
+            self.last_timestamp[channel_id] = \
+                channel_state.get_last_timestamp()  # ?
             chunk = 1
             delay = abs(timestamp - self.get_current_time(channel_id))
             while timestamp > Config.CHANNELS[channel_id][2]:

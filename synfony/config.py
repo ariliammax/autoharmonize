@@ -11,19 +11,20 @@ class Config:
         ["The Turn Down/other", 100, 1.4929],
         ["The Turn Down/vocals", 100, 1.4929],
     ]
-    PACKET_MAX_LEN = 1024
-    FLOAT_BYTES = 1 << 2
+    MACHINES = ['localhost:10012',
+                'localhost:20012',
+                'localhost:30012']
+
     INT_MAX_LEN = 1 << 64
     LIST_MAX_LEN = 255
-    MACHINES = ['localhost:10000',
-                'localhost:20000',
-                'localhost:30000']
     STR_MAX_LEN = 280
-    TOLERABLE_DELAY = 0.1
+    PACKET_MAX_LEN = 1024
 
     HANDSHAKE_TIMEOUT = 0.1
     HANDSHAKE_INTERVAL = 1.001
     HEARTBEAT_TIMEOUT = 1
+    TIMEOUT = 2
+    TOLERABLE_DELAY = 0.1
 
 
 class UIConfig:

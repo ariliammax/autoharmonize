@@ -393,7 +393,6 @@ HeartbeatResponse = BaseResponse.add_fields_with_operation_code(
 
 
 IdentityRequest = BaseRequest.add_fields_with_operation_code(
-    idx=int,
     machine_address=MachineAddress,
     operation_code=OperationCode.IDENTITY
 )

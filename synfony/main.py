@@ -5,16 +5,18 @@ from argparse import ArgumentParser, Namespace
 from multiprocessing import Process
 from socket import AF_INET, SHUT_RDWR, SOCK_STREAM, socket
 from synfony.config import Config
-from synfony.enums import EventCode, OperationCode
+from synfony.enums import OperationCode
 from synfony.models import BaseEvent, \
                            NoneEvent, \
                            PauseEvent, \
                            PlayEvent, \
                            SeekEvent
-from synfony.models import ChannelState
-from synfony.models import MachineAddress
-from synfony.models import IdentityRequest, IdentityResponse
-from synfony.models import HeartbeatRequest, HeartbeatResponse
+from synfony.models import BaseRequest, \
+                           HeartbeatRequest, \
+                           HeartbeatResponse, \
+                           IdentityRequest, \
+                           IdentityResponse
+from synfony.models import ChannelState,  MachineAddress
 from synfony.ui import UI
 from threading import Thread
 from typing import Callable, List, Tuple
@@ -55,40 +57,38 @@ def parse_args():
                         if v is not None})
 
 
-def accept_clients(other_machine_addresses, s: socket):
+def accept_clients(machine_addresses, s: socket):
     """Called when the initial handshake between two machines begins.
 
         The startup protocol is:
             1 - connect
             2 - send `IdentityRequest`s
+            3 - start `listen_client` threads
     """
     while True:
-        # 1
-        connection, _ = s.accept()
-        continue  # TODO: don't continue here, just patch to avoid for now
+        try:
+            # 1
+            connection, _ = s.accept()
 
-        # 2 - `IdentityRequest`
-        while True:
-            try:
-                request_data = connection.recv(Config.PACKET_MAX_LEN)
-                if (IdentityRequest.peek_event_code(request_data) !=
-                        EventCode.IDENTITY):
-                    continue
-                request = IdentityRequest.deserialize(request_data)
-                machine_address = request.get_machine_address()
-                # TODO lock
-                if machine_address.get_idx() >= len(other_machine_addresses):
-                    while (machine_address.get_idx() <
-                           len(other_machine_addresses)):
-                        other_machines_addresses.append(None)
-                other_machine_addresses[machine_address.get_idx()] = \
-                    machine_address
-                # TODO: join that new address...maybe send it over that
-                # socket instead...
-                # TODO: update timeout times for handshaking
-                break
-            except:
-                pass
+            # 2 - `IdentityRequest`
+            request_data = connection.recv(Config.PACKET_MAX_LEN)
+            if (BaseRequest.peek_operation_code(request_data) !=
+                    OperationCode.IDENTITY):
+                continue
+            request = IdentityRequest.deserialize(request_data)
+            machine_address = request.get_machine_address()
+            # TODO lock
+            if machine_address.get_idx() >= len(machine_addresses):
+                while (machine_address.get_idx() <
+                       len(machine_addresses)):
+                    machine_addresses.append(None)
+            machine_addresses[machine_address.get_idx()] =  machine_address
+
+            # 3 - `listen_client` start
+            # TODO: actually do
+            print('accepted', s.getsockname())
+        except Exception as e:
+            pass
 
 
 def listen_client(idx, connection, machine_message_queues):
@@ -97,8 +97,8 @@ def listen_client(idx, connection, machine_message_queues):
     while True:
         # TODO: add to a queue for processing by the handshake event,
         request_data = connection.recv(Config.PACKET_MAX_LEN)
-        if (HeartbeatRequest.peek_event_code(request_data) !=
-                EventCode.HEARTBEAT):
+        if (BaseRequest.peek_operation_code(request_data) !=
+                OperationCode.HEARTBEAT):
             continue
         request = HeartbeatRequest.deserialize(request_data)
         machine_message_queues.append(request)
@@ -255,51 +255,73 @@ def handler(e, s: socket):
 def main(idx: int, machines: List[str]):
     """Start the connections and what not.
     """
-    # machine_addresses = [MachineAddress(
-    #                          host=machine[0],
-    #                          idx=-1,
-    #                          port=machine[1],
-    #                          status=False)]
-    s = socket(AF_INET, SOCK_STREAM)
-    try:
-        machine_address = machines[idx]
-        other_machine_addresses = machines[idx + 1:] + machines[:idx]
-        s.bind(machine_address)
-        s.listen()
-        s.settimeout(None)
-        # this should be `machine_addresses: List[MachineAddress]`
-        threading.Thread(target=accept_clients,
-                         args=(other_machine_addresses, s)).start()
-        time.sleep(Config.TOLERABLE_DELAY)
-        # TODO: start timer for handshake
-        other_sockets = []
-        for other_machine_address in other_machine_addresses:
-            other_socket = socket(AF_INET, SOCK_STREAM)
-            other_socket.settimeout(None)  # TODO handshake timeout post start
-            other_socket.connect(other_machine_address)
-            # other_socket.sendall(IdentityRequest(idx=idx).serialize())
-            other_sockets.append(other_socket)
+    machine_addresses = [MachineAddress(
+                             host=machine[0],
+                             idx=i,
+                             port=machine[1],
+                             status=False)
+                         for i, machine in enumerate(machines)]
+    # TODO: pass ui onto `accept_clients`
+    ui_manager = UI()
+
+    def networking(idx: int,
+                   machine_addresses: List[MachineAddress],
+                   ui_manager: UI):
+        try:
+            machine_address = machine_addresses[idx]
+            s = socket(AF_INET, SOCK_STREAM)
+            s.bind(
+                (machine_address.get_host(),
+                 machine_address.get_port())
+            )
+            s.settimeout(None)  # infinite, so blocking `recv`s
+            s.listen()
+
+            print('listen', idx)
+
+            sockets = []
+            def connect_to_socket(idx, other_machine_address):
+                if other_machine_address.get_idx() == idx:
+                    sockets.append(s)
+                else:
+                    while True:
+                        try:
+                            other_socket = socket(AF_INET, SOCK_STREAM)
+                            other_socket.settimeout(Config.HANDSHAKE_TIMEOUT)
+                            other_socket.connect(
+                                (other_machine_address.get_host(),
+                                 other_machine_address.get_port())
+                            )
+                            other_socket.sendall(
+                                IdentityRequest(
+                                    machine_address=machine_address
+                                ).serialize()
+                            )
+                            sockets.append(other_socket)
+                            break
+                        except Exception as e:
+                            pass
+            connect_threads = [threading.Thread(target=connect_to_socket,
+                                                args=[idx,
+                                                      other_machine_address])
+                               for other_machine_address in machine_addresses]
+            [thread.start() for thread in connect_threads]
+            threading.Thread(target=accept_clients,
+                             args=(machine_addresses, s)).start()
+            [thread.join() for thread in connect_threads]
+            # TODO: handshakes now
+
+            # need to not finish here.. otherwise we'll close the socket :(
             while True:
-                try:
-                    other_socket = socket(AF_INET, SOCK_STREAM)
-                    # TODO handshake timeout post start
-                    other_socket.settimeout(None)
-                    other_socket.connect(other_machine_address)
-                    # other_socket.sendall(IdentityRequest(
-                    #     idx=idx,
-                    #     machine_address=machine_address).serialize()
-                    # )
-                    other_sockets.append(other_socket)
-                    break
-                except:
-                    continue
-        ui_manager = UI()
-        ui_manager.init()
-        # TODO: pass this somewhere
-    except Exception as e:
-        handler(e=e, s=s)
-    finally:
-        handler(e=None, s=s)
+                pass
+        except Exception as e:
+            handler(e=e, s=s)
+        finally:
+            handler(e=None, s=s)
+
+    Thread(target=networking,
+           args=[idx, machine_addresses, ui_manager]).start()
+    ui_manager.init()
 
 
 if __name__ == '__main__':
