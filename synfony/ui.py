@@ -300,7 +300,7 @@ class UI():
                     pygame.quit()
                     exit()
                 else:
-                    streamers[0].event(event)
+                    streamers[-1].event(event)
             for object in self.objects:
                 object.process()
             pygame.display.flip()

@@ -119,16 +119,15 @@ class AllStreamer(Streamer):
 
 
 class LocalMusicStreamer(Streamer):
-    current_chunk_index = 1
-    current_chunk_realtime = 0.0
-    current_chunk_timestamp = 0.0
-    last_timestamp = 0.0
-    playing = True
-    timer = None
-    volume = 50
-
     def __init__(self, channel_id):
         super().__init__(channel_id)
+        self.current_chunk_index = 1
+        self.current_chunk_realtime = 0.0
+        self.current_chunk_timestamp = 0.0
+        self.last_timestamp = 0.0
+        self.playing = True
+        self.timer = None
+        self.volume = 50
         channel = pygame.mixer.Channel(channel_id)
         channel.set_endevent(pygame.USEREVENT + channel_id)
         chunk = 1
