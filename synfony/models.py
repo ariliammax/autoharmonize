@@ -4,7 +4,7 @@
 from synfony.enums import OperationCode, EventCode
 from synfony.serialization import SerializationUtils
 from synfony.util import Model
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Optional
 
 
 # DATA MODELS
@@ -101,10 +101,10 @@ class BaseEvent(Model.model_with_fields(event_code=int)):
 
 class ChannelState(Model.model_with_fields(
                            idx=int,
-                           timestamp=int,
+                           last_timestamp=float,
+                           timestamp=float,
                            playing=bool,
-                           # TODO: loading / buffering?
-                           volume=int
+                           volume=float
                        )
                    ):
     """this is the state which must reach consensus.
@@ -113,7 +113,7 @@ class ChannelState(Model.model_with_fields(
     """
 
     @staticmethod
-    def choice_func(channel_idx: int, channel_events_states: List[BaseEvent]):
+    def choice_func(channel_events_states: List[BaseEvent]):
         """Reach consensus of what the global channel states are,
             from each of the machine states from sent.
 
@@ -130,42 +130,59 @@ class ChannelState(Model.model_with_fields(
         if len(channel_events_states) == 0:
             return DEFAULT_CHANNEL_STATE
 
-        ordered_states = [state for state in channel_events_states]
-        ordered_states.sort(key=lambda state: -1 * state.get_timestamp())
+        ordered_events = [event for event in channel_events_states]
+        ordered_events.sort(
+            key=lambda event:-1 * event.get_channel_state().get_timestamp()
+        )
 
-        any_pause = len([state for state in ordered_states
-                         if state.get_event_code() == EventCode.PAUSE.value]) > 0
+        any_pause = len(
+            [event for event in ordered_events
+             if event.get_event_code() == EventCode.PAUSE.value]
+        ) > 0
 
-        any_play = len([state for state in ordered_states
-                        if state.get_event_code() == EventCode.PLAY.value]) > 0
+        any_play = len(
+            [event for event in ordered_events
+             if event.get_event_code() == EventCode.PLAY.value]
+        ) > 0
 
-        any_playing = len([state for state in ordered_states
-                           if state.get_playing()]) > 0
+        any_playing = len(
+            [event for event in ordered_events
+             if event.get_channel_state().get_playing()]
+        ) > 0
 
-        seek_idxes = [i for i, state in enumerate(ordered_states)
-                      if state.get_event_code() == EventCode.SEEK.value]
+        seek_idxes = [i for i, event in enumerate(ordered_events)
+                      if event.get_event_code() == EventCode.SEEK.value]
         any_seek = len(seek_idxes) > 0
         if not any_seek and not any_playing:
             seek_idxes = [0]
+            ordered_events[0].get_channel_state().set_timestamp(
+                ordered_events[0].get_channel_state().get_last_timestamp()
+            )
         if not any_seek:
-            seek_idxes = [i for i, state in enumerate(ordered_states)
-                          if state.get_playing()]
+            seek_idxes = [i for i, event in enumerate(ordered_events)
+                          if event.get_channel_state().get_playing()]
 
-        vol_idxes = [i for i, state in enumerate(ordered_states)
-                     if state.get_event_code() == EventCode.VOLUME.value]
+        vol_idxes = [i for i, event in enumerate(ordered_events)
+                     if event.get_event_code() == EventCode.VOLUME.value]
         any_vol = len(vol_idxes) > 0
         if not any_vol:
             vol_idxes = [0]
 
         return ChannelState(
-            idx=channel_idx,
-            timestamp=ordered_states[seek_idxes[0]].get_timestamp(),
+            idx=ordered_events[seek_idxes[0]]
+                .get_channel_state().get_idx(),
+            last_timestamp=ordered_events[seek_idxes[0]]
+                .get_channel_state().get_last_timestamp(),
+            timestamp=ordered_events[seek_idxes[0]]
+                .get_channel_state().get_timestamp(),
             playing=(False if any_pause else (any_play or any_playing)),
-            volume=ordered_states[vol_idxes[0]].get_volume()
+            volume=ordered_events[vol_idxes[0]]
+                .get_channel_state().get_volume()
         )
 
 DEFAULT_CHANNEL_STATE = ChannelState(
     idx=0,
+    last_timestamp=0,
     timestamp=0,
     playing=False,
     volume=100
@@ -181,31 +198,34 @@ MixedChannelState = ChannelState.add_fields(
 
 NoneEvent = BaseEvent.add_fields_with_event_code(
     channel_state=ChannelState,
+    realtime=float,
     event_code=EventCode.NONE
 )
 
 PauseEvent = BaseEvent.add_fields_with_event_code(
     channel_state=ChannelState,
+    realtime=float,
     event_code=EventCode.PAUSE
 )
 
 
 PlayEvent = BaseEvent.add_fields_with_event_code(
     channel_state=ChannelState,
-    # realtime=int, TODO?
+    realtime=float,
     event_code=EventCode.PLAY
 )
 
 
 SeekEvent = BaseEvent.add_fields_with_event_code(
     channel_state=ChannelState,
-    # realtime=int, TODO ?
+    realtime=float,
     event_code=EventCode.SEEK
 )
 
 
 VolumeEvent = BaseEvent.add_fields_with_event_code(
     channel_state=ChannelState,
+    realtime=float,
     event_code=EventCode.VOLUME
 )
 
@@ -360,7 +380,7 @@ class BaseResponse(BaseRequest.add_fields(error=str)):
 HeartbeatRequest = BaseRequest.add_fields_with_operation_code(
     channel_events_states=list,
     machine_addresses=list,
-    sent_timestamp=int,
+    sent_timestamp=float,
     operation_code=OperationCode.HEARTBEAT,
     fields_list_nested=dict(
         channel_events_states=BaseEvent,

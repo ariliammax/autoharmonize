@@ -65,14 +65,14 @@ def accept_clients(other_machine_addresses, s: socket):
     while True:
         # 1
         connection, _ = s.accept()
-        continue
+        continue  # TODO: don't continue here, just patch to avoid for now
 
         # 2 - `IdentityRequest`
         while True:
             try:
                 request_data = connection.recv(Config.PACKET_MAX_LEN)
                 if (IdentityRequest.peek_event_code(request_data) !=
-                        EventCode.IdentityRequest):
+                        EventCode.IDENTITY):
                     continue
                 request = IdentityRequest.deserialize(request_data)
                 machine_address = request.get_machine_address()
@@ -91,18 +91,25 @@ def accept_clients(other_machine_addresses, s: socket):
                 pass
 
 
-def listen_client(idx, connection):
+def listen_client(idx, connection, machine_message_queues):
     """For continued listening on a client, where the handshakes are received.
     """
     while True:
-        # TODO: add to a queue for processing by the handshake event
-        _ = connection.recv(Config.PACKET_MAX_LEN)
+        # TODO: add to a queue for processing by the handshake event,
+        request_data = connection.recv(Config.PACKET_MAX_LEN)
+        if (HeartbeatRequest.peek_event_code(request_data) !=
+                EventCode.HEARTBEAT):
+            continue
+        request = HeartbeatRequest.deserialize(request_data)
+        machine_message_queues.append(request)
 
 
 def metronome(other_sockets: List[socket],
+              other_machine_addresses: List[MachineAddress],
               state: ChannelState,
               events: List[BaseEvent],
               ui_manager: UI,
+              machine_message_queues: List[HeartbeatRequest],
               choice_func: Callable = ChannelState.choice_func):
     """Share and reach consensus about `state`, so we can pass it to the
         `LocalMusicStreamer`.
@@ -155,29 +162,32 @@ def metronome(other_sockets: List[socket],
         machine_addresses=machine_addresses,
         sent_timestamp=start_t_ms
     )
-    request_b = request.serialize()
+    request_data = request.serialize()
 
     # 1 - send to all
-    def impl_send_state(s: socket, i: int, request_b: bytes):
+    def impl_send_state(s: socket, i: int, request_data: bytes):
         status = False
         while time.time() - start_t < Config.HEARTBEAT_TIMEOUT:
             try:
-                s.sendall(request_b)
+                s.sendall(request_data)
                 status = True
                 break
             except:
                 pass
         # TODO: locking
         other_machine_addresses[i].set_status(status)
+
     send_threads = [threading.Thread(target=impl_send_state,
-                                     args=[other_socket, i, request_b])
+                                     args=[other_socket, i, request_data])
                     for i, other_socket in enumerate(other_sockets)]
     [thread.start() for thread in send_threads]
 
     # 2 - pull off queue, wait until acceptable
     def message_queues_empty():
-        # TODO: add message queues to `listen_client`
-        return False
+        return len(
+            [queue for queue in machine_message_queues
+             if len(queue) == 0]
+        ) == 0
 
     while (time.time() - start_t < Config.HEARTBEAT_TIMEOUT and
            message_queues_empty()):
@@ -195,7 +205,20 @@ def metronome(other_sockets: List[socket],
 
         machine_message_queues[i].clear()
 
-    # 3 - consensus + `ui_manager.streamer.sync(...)`
+    # 3 - consensus + `ui_manager.streamer.sync(...)`; and
+    #     increment the `._event._timestamp` by
+    #     `time.time() - ._sent_timestamp` to account for network latency
+    #     (relativistic effects are acceptable and within our
+    #     `Config.TOLERABLE_DELAY`)... do this here, since it's the
+    #      most accurate we can reasonably get it without going to consensus
+    #      (and is likely to be within tolerable range anyways).
+    [event.get_channel_state().set_timestamp(
+         event.get_channel_state().get_timestamp() +
+         time.time() - vote.get_sent_timestamp()
+     )
+     for vote in votes
+     for event in vote.get_channel_events_states()]
+
     all_channel_idxes = {event.get_channel_state().get_idx()
                          for vote in votes
                          for event in vote.get_channel_events_states()}

@@ -24,6 +24,10 @@ class Streamer(ABC):
         pass
 
     @abstractmethod
+    def get_last_time(self, channel_id):
+        pass
+
+    @abstractmethod
     def get_chunk(self, channel_id, chunk):
         pass
 
@@ -69,6 +73,7 @@ class Streamer(ABC):
 
 
 class LocalMusicStreamer(Streamer):
+    last_timestamp = []
     current_chunk_index = []
     current_chunk_realtime = []
     current_chunk_timestamp = []
@@ -77,6 +82,7 @@ class LocalMusicStreamer(Streamer):
     volume = []
 
     def __init__(self):
+        self.last_timestamp = [0.0 for _ in range(len(Config.CHANNELS))]
         self.current_chunk_index = [1 for _ in range(len(Config.CHANNELS))]
         self.current_chunk_realtime = [time() for _ in range(len(Config.CHANNELS))]
         self.current_chunk_timestamp = [0.0 for _ in range(len(Config.CHANNELS))]
@@ -115,6 +121,9 @@ class LocalMusicStreamer(Streamer):
             self.current_chunk_index[channel_id] = chunk
             self.current_chunk_realtime[channel_id] = time()
             self.current_chunk_timestamp[channel_id] = 0.0
+
+    def get_last_time(self, channel_id):
+        return self.last_timestamp[channel_id]
 
     def get_chunk(self, channel_id, chunk):
         file = Config.CHANNELS[channel_id][0]
@@ -183,6 +192,7 @@ class LocalMusicStreamer(Streamer):
             playing = channel_state.get_playing()
             timestamp = channel_state.get_timestamp()
             volume = channel_state.get_volume()
+            self.last_timestamp = channel_state.get_last_timestamp()  # ?
             chunk = 1
             delay = abs(timestamp - self.get_current_time(channel_id))
             while timestamp > Config.CHANNELS[channel_id][2]:

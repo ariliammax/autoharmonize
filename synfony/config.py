@@ -12,6 +12,7 @@ class Config:
         ["The Turn Down/vocals", 100, 1.4929],
     ]
     PACKET_MAX_LEN = 1024
+    FLOAT_BYTES = 1 << 2
     INT_MAX_LEN = 1 << 64
     LIST_MAX_LEN = 255
     MACHINES = ['localhost:10000',

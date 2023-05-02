@@ -15,11 +15,11 @@ from typing import Callable, Optional
 # anyways, this isn't exactly that, but a safe over-approximation.
 
 # the number of bits taken up in serializing an `int` using `chr`s
-INT_LEN_BITS = int(log(Config.INT_MAX_LEN) / 8) + 1
+INT_LEN_BYTES = int(log(Config.INT_MAX_LEN) / 8) + 1
 # the number of bits taken up in serializing an `int` encoding a `list`'s `len`
-LIST_LEN_BITS = int(log(Config.LIST_MAX_LEN) / 8) + 1
+LIST_LEN_BYTES = int(log(Config.LIST_MAX_LEN) / 8) + 1
 # the number of bits taken up in serializing an `int` encoding a `str`'s `len`
-STR_LEN_BITS = int(log(Config.STR_MAX_LEN) / 8) + 1
+STR_LEN_BYTES = int(log(Config.STR_MAX_LEN) / 8) + 1
 
 
 class SerializationUtils:
@@ -41,7 +41,19 @@ class SerializationUtils:
         return bool(val).to_bytes(1, byteorder='little')
 
     @staticmethod
-    def deserialize_int(data: bytes, length: int = INT_LEN_BITS) -> int:
+    def deserialize_float(data: bytes) -> float:
+        """Deserialize `bytes` into an `float`.
+        """
+        return struct.unpack('f', data[:min(length, len(data))])
+
+    @staticmethod
+    def serialize_float(val: float) -> bytes:
+        """Serialize an `float` into a `bytes`.
+        """
+        return struct.pack('f', val)
+
+    @staticmethod
+    def deserialize_int(data: bytes, length: int = INT_LEN_BYTES) -> int:
         """Deserialize `bytes` into an `int`.
             It will be length `length`.
         """
@@ -49,7 +61,7 @@ class SerializationUtils:
                               byteorder='little')
 
     @staticmethod
-    def serialize_int(val: int, length: int = INT_LEN_BITS) -> bytes:
+    def serialize_int(val: int, length: int = INT_LEN_BYTES) -> bytes:
         """Serialize an `int` into a `bytes`.
             It will be length `length`.
         """
@@ -59,9 +71,9 @@ class SerializationUtils:
     def deserialize_str(data: bytes) -> str:
         """Deserialize `bytes` into a `str`.
         """
-        length = SerializationUtils.deserialize_int(data[:STR_LEN_BITS],
-                                                    length=STR_LEN_BITS)
-        return data[STR_LEN_BITS:length + STR_LEN_BITS].decode('utf-8')
+        length = SerializationUtils.deserialize_int(data[:STR_LEN_BYTES],
+                                                    length=STR_LEN_BYTES)
+        return data[STR_LEN_BYTES:length + STR_LEN_BYTES].decode('utf-8')
 
     @staticmethod
     def serialize_str(val: str) -> bytes:
@@ -72,7 +84,7 @@ class SerializationUtils:
         encoded = (str(val or '').encode('utf-8'))[:Config.STR_MAX_LEN]
         return SerializationUtils.serialize_int(
             len(encoded),
-            length=STR_LEN_BITS) + encoded
+            length=STR_LEN_BYTES) + encoded
 
     @staticmethod
     def deserialize_list(data: bytes,
@@ -86,9 +98,9 @@ class SerializationUtils:
             deserialized object.
         """
         if remain is None:
-            length = SerializationUtils.deserialize_int(data[:LIST_LEN_BITS],
-                                                        length=LIST_LEN_BITS)
-            return SerializationUtils.deserialize_list(data[LIST_LEN_BITS:],
+            length = SerializationUtils.deserialize_int(data[:LIST_LEN_BYTES],
+                                                        length=LIST_LEN_BYTES)
+            return SerializationUtils.deserialize_list(data[LIST_LEN_BYTES:],
                                                        item_deserialize,
                                                        item_serialize,
                                                        remain=length)
@@ -116,7 +128,7 @@ class SerializationUtils:
         if remain is None:
             val = val[:Config.LIST_MAX_LEN]
             return (SerializationUtils.serialize_int(len(val),
-                                                     length=LIST_LEN_BITS) +
+                                                     length=LIST_LEN_BYTES) +
                     SerializationUtils.serialize_list(val,
                                                       item_serialize,
                                                       remain=len(val)))

@@ -80,6 +80,8 @@ class Model(object):
         match t:
             case builtins.bool:
                 return SerializationUtils.deserialize_bool
+            case builtins.float:
+                return SerializationUtils.deserialize_float
             case builtins.int:
                 return SerializationUtils.deserialize_int
             case builtins.str:
@@ -99,6 +101,8 @@ class Model(object):
         match t:
             case builtins.bool:
                 return SerializationUtils.serialize_bool
+            case builtins.float:
+                return SerializationUtils.serialize_float
             case builtins.int:
                 return SerializationUtils.serialize_int
             case builtins.str:
