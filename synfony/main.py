@@ -104,10 +104,8 @@ def listen_client(idx, connection, machine_message_queues):
         machine_message_queues.append(request)
 
 
-def metronome(other_sockets: List[socket],
-              other_machine_addresses: List[MachineAddress],
-              state: ChannelState,
-              events: List[BaseEvent],
+def metronome(sockets: List[socket],
+              machine_addresses: List[MachineAddress],
               ui_manager: UI,
               machine_message_queues: List[HeartbeatRequest],
               choice_func: Callable = ChannelState.choice_func):
@@ -134,11 +132,11 @@ def metronome(other_sockets: List[socket],
     start_t_ms = int(1000 * start_t)
 
     # TODO: locking
-    machine_addresses=[machine
-                       for i, machine in
-                       enumerate(other_machine_addresses)
-                       if (machine is not None and
-                           machine.get_status())]
+    up_machine_addresses=[machine
+                          for i, machine in
+                          enumerate(machine_addresses)
+                          if (machine is not None and
+                              machine.get_status())]
 
     latest_events = \
         [[event for event in ui_manager.event_queue[::-1]
@@ -175,18 +173,23 @@ def metronome(other_sockets: List[socket],
             except:
                 pass
         # TODO: locking
-        other_machine_addresses[i].set_status(status)
+        machine_addresses[i].set_status(status)
 
     send_threads = [threading.Thread(target=impl_send_state,
-                                     args=[other_socket, i, request_data])
-                    for i, other_socket in enumerate(other_sockets)]
+                                     args=[socket[machine.get_idx()],
+                                           machine.get_idx(),
+                                           request_data])
+                    for machine in up_machine_addresses]
     [thread.start() for thread in send_threads]
 
     # 2 - pull off queue, wait until acceptable
     def message_queues_empty():
         return len(
-            [queue for queue in machine_message_queues
-             if len(queue) == 0]
+            [queue for queue, machine in zip(machine_message_queues,
+                                             machine_addresses)
+             if (len(queue) == 0 and
+                 machine is not None and
+                 machine.get_status())]
         ) == 0
 
     while (time.time() - start_t < Config.HEARTBEAT_TIMEOUT and
@@ -197,8 +200,8 @@ def metronome(other_sockets: List[socket],
 
     votes: List[HeartbeatRequest] = []
     for i, queue in enumerate(machine_message_queues):
-        other_machine_addresses[i].set_status(len(queue) != 0 and
-                                              other_machine_addresses[i]
+        machine_addresses[i].set_status(len(queue) != 0 and
+                                              machine_addresses[i]
                                               .get_status())
         if len(queue) != 0:
             votes.append(queue[-1])
@@ -231,12 +234,12 @@ def metronome(other_sockets: List[socket],
     )
 
     # 4 - schedule next
-    # TODO: correct arguments...
-    timer = threading.Timer(interval=(Config.HANDSHAKE_INTERVAL - start_t),
-                            function=handshake,
-                            args=[],
-                            kwargs={})
-    timer.start()
+    time.sleep(Config.HANDSHAKE_INTERVAL - (time.time() - start_t))
+    return metronome(sockets=sockets,
+                     machine_addresses=machine_addresses,
+                     ui_manager=ui_manager,
+                     machine_message_queues=machine_message_queues,
+                     choice_func=choice_func)
 
 
 def handler(e, s: socket):
@@ -261,6 +264,7 @@ def main(idx: int, machines: List[str]):
                              port=machine[1],
                              status=False)
                          for i, machine in enumerate(machines)]
+    machine_message_queues = [[] for _ in machines]
     # TODO: pass ui onto `accept_clients`
     ui_manager = UI()
 
@@ -309,9 +313,13 @@ def main(idx: int, machines: List[str]):
             threading.Thread(target=accept_clients,
                              args=(machine_addresses, s)).start()
             [thread.join() for thread in connect_threads]
-            # TODO: handshakes now
 
-            # need to not finish here.. otherwise we'll close the socket :(
+            # if this returns, then we'll close the socket
+            # metronome(sockets=sockets,
+            #           machine_addresses=machine_addresses,
+            #           ui_manager=ui_manager,
+            #           machine_message_queues=machine_message_queues,
+            #           choice_func=ChannelState.choice_func)
             while True:
                 pass
         except Exception as e:
