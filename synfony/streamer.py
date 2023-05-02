@@ -136,10 +136,10 @@ class LocalMusicStreamer(Streamer):
         self.last_timestamp = 0.0
         self.playing = False
         self.timer = None
-        self.volume = 50
+        self.volume = 0.5
         channel = pygame.mixer.Channel(channel_id)
         channel.set_endevent(pygame.USEREVENT + channel_id)
-        channel.set_volume(self.volume / 100)
+        channel.set_volume(self.volume)
         chunk = 1
         sound = self.get_chunk(chunk)
         if sound is None:
@@ -261,7 +261,7 @@ class LocalMusicStreamer(Streamer):
             self.playing = True
         self.last_timestamp = last_timestamp
         self.volume = volume
-        channel.set_volume(volume / 100)
+        channel.set_volume(volume)
 
 
 class RemoteMusicStream():

@@ -14,9 +14,8 @@ from synfony.streamer import (
 import math
 import pygame
 
-
 class Button():
-    def __init__(self, ui, x, y, width, height, txt, selected_txt, streamers, on_click_function=None):
+    def __init__(self, ui, x, y, width, height, txt, selected_txt, streamers, on_click_function=None, should_load_on_click=True):
         self.ui = ui
         self.x = x
         self.y = y
@@ -29,6 +28,7 @@ class Button():
         self.txt = txt
         self.selected_txt = selected_txt
         self.font = pygame.font.SysFont('Arial', 30)
+        self.should_load_on_click = should_load_on_click
 
         self.fill_colors = {
             'normal': '#3498db',
@@ -47,21 +47,22 @@ class Button():
         self.button_surface.fill(self.fill_colors['normal'])
 
         # Set the state of the button
-        self.is_selected = self.streamers[self.ui.channel].is_playing()
+        if (not self.ui.get_is_loading()):
+            self.is_selected = self.streamers[self.ui.channel].is_playing()
 
         if (self.is_selected):
             self.button_surf = self.font.render(self.selected_txt, True, (255, 255, 255))
         else:
             self.button_surf = self.font.render(self.txt, True, (255, 255, 255))
 
-        if not self.ui.is_loading:
+        if not self.ui.get_is_loading():
             if self.button_rect.collidepoint(mousePos):
                 self.button_surface.fill(self.fill_colors['hover'])
                 if pygame.mouse.get_pressed(num_buttons=3)[0]:
                     self.button_surface.fill(self.fill_colors['pressed'])
                     if not self.already_pressed:
                         self.already_pressed = True
-                        if Config.HANDSHAKE_ENABLED:
+                        if Config.HANDSHAKE_ENABLED and self.should_load_on_click:
                             self.ui.start_loading()
                         self.on_click_function(
                             channel_idx=self.ui.channel,
@@ -70,11 +71,35 @@ class Button():
                         )
                 else:
                     self.already_pressed = False
+
         self.button_surface.blit(self.button_surf, [
             self.button_rect.width/2 - self.button_surf.get_rect().width/2,
             self.button_rect.height/2 - self.button_surf.get_rect().height/2
         ])
+
         self.ui.screen.blit(self.button_surface, self.button_rect)
+
+
+class Loader:
+    def __init__(self, ui, x, y, size, speed):
+        self.ui = ui
+        self.x = x
+        self.y = y
+        self.size = size
+        self.speed = speed
+        self.angle = 0
+        self.color = (255, 255, 255)
+        self.surface = pygame.Surface((size, size))
+        self.rect = pygame.Rect(x, y, size, size)
+        self.ui.objects.append(self)
+
+    def process(self):
+        self.surface.fill((0, 0, 0))
+        pygame.draw.arc(self.surface, self.color, (0, 0, self.size, self.size),
+                        self.angle, self.angle + math.pi/2, int(self.size/8))
+        self.angle = (self.angle + self.speed) % (2*math.pi)
+        if (self.ui.get_is_loading()):
+            self.ui.screen.blit(self.surface, self.rect)
 
 
 class Picker:
@@ -107,7 +132,8 @@ class Picker:
             '<',
             '<',
             streamers,
-            self._decrement
+            self._decrement,
+            False
         )
 
         self.right_button = Button(
@@ -119,7 +145,8 @@ class Picker:
             '>',
             '>',
             streamers,
-            self._increment
+            self._increment,
+            False
         )
 
         self.value_surface = self.font.render(str(streamers[self.value].get_title()), True, (255, 255, 255))
@@ -239,7 +266,7 @@ class SeekSlider():
             self.right_label_rect.y = self.y - self.height + 20
   
         # handle input
-        if not self.ui.is_loading:
+        if not self.ui.get_is_loading():
             if self.slider_rect.collidepoint(mousePos):
                 if pygame.mouse.get_pressed(num_buttons=3)[0]:
                     self.is_dragging = True
@@ -251,7 +278,7 @@ class SeekSlider():
                         new_value = max(min(new_value, self.max_val), self.min_val)
                         self.value = new_value
                         # update the position of the knob based on the new value
-                        knob_pos = int(((self.value - self.min_val) / range) * (self.height - self.value))
+                        knob_pos = int(((self.value - self.min_val) / range) * (self.height - self.width))
                     else:
                         # Horizontal
                         mouse_x = mousePos[0] - self.slider_rect.left - self.height / 2
@@ -300,27 +327,6 @@ class SeekSlider():
         self.ui.screen.blit(self.left_label_surface, self.left_label_rect)
         self.ui.screen.blit(self.right_label_surface, self.right_label_rect)
 
-class Loader:
-    def __init__(self, ui, x, y, size, speed):
-        self.ui = ui
-        self.x = x
-        self.y = y
-        self.size = size
-        self.speed = speed
-        self.angle = 0
-        self.color = (255, 255, 255)
-        self.surface = pygame.Surface((size, size))
-        self.rect = pygame.Rect(x, y, size, size)
-        self.ui.objects.append(self)
-    
-    def process(self):
-        self.surface.fill((0, 0, 0))
-        pygame.draw.arc(self.surface, self.color, (0, 0, self.size, self.size), 
-                        self.angle, self.angle + math.pi/2, int(self.size/8))
-        self.angle = (self.angle + self.speed) % (2*math.pi)
-        if (self.ui.is_loading):
-            self.ui.screen.blit(self.surface, self.rect)
-
 
 class UI():
     channel = 0
@@ -346,7 +352,7 @@ class UI():
 
         Loader(self, UIConfig.SCREEN_WIDTH / 2 - 25, 50, 50, 0.1)
         Picker(self, 0, 0, UIConfig.SCREEN_WIDTH, 50, 0, 0, Streamer.get_num_channels(), self.streamers, None)
-        SeekSlider(self, 15, UIConfig.SCREEN_HEIGHT / 2 - 150, 50, 300, self.streamers, (lambda s: s.get_volume()), (lambda s: 100), self.stringify_volume, didChangeVolumeTo)
+        SeekSlider(self, 15, UIConfig.SCREEN_HEIGHT / 2 - 150, 50, 300, self.streamers, (lambda s: s.get_volume()), (lambda s: 1), self.stringify_volume, didChangeVolumeTo)
         Button(self, UIConfig.SCREEN_WIDTH / 2 - 125, UIConfig.SCREEN_HEIGHT / 2 - 50, 250, 100, "Play", "Pause", self.streamers, playButtonTapped)
         SeekSlider(self, 0, UIConfig.SCREEN_HEIGHT - 70, 640, 50, self.streamers, (lambda s: s.get_current_time()), (lambda s: s.get_total_time()), self.stringify_time, didSeekTo)
 
@@ -365,20 +371,20 @@ class UI():
             self.fps_clock.tick(UIConfig.fps)
     
     def stringify_time(self, time):
-        minutes = int(time // 60)
-        seconds = int(time - (minutes * 60))
-        if (seconds < 10):
-            return str(minutes) + ":0" + str(seconds)
-        else:
-            return str(minutes) + ":" + str(seconds)
+        minutes, seconds = divmod(int(time), 60)
+        return f"{minutes}:{seconds:02d}"
 
     def stringify_volume(self, volume):
-        if (volume == 0):
-            return "MUTED"
-        elif (volume == 100):
-            return "MAX"
-        else:
-            return str(int(volume))
+        match volume:
+            case 0:
+                return "MUTED"
+            case 1:
+                return "MAX"
+            case _:
+                return str(int(volume * 100))
+
+    def get_is_loading(self):
+        return self.is_loading or self.streamers[self.channel].is_seeking()
 
     def start_loading(self):
         self.is_loading = True
