@@ -5,12 +5,12 @@ from synfony.models import ChannelState
 def playButtonTapped(channel_idx, event_queue, streamer):
     channel_state = ChannelState(
         idx=channel_idx,
-        last_timestamp=streamer.get_last_time(channel_idx),
-        timestamp=streamer.get_current_time(channel_idx),
-        playing=not streamer.is_playing(channel_idx),
-        volume=streamer.get_volume(channel_idx),
+        last_timestamp=streamer.get_last_time(),
+        timestamp=streamer.get_current_time(),
+        playing=not streamer.is_playing(),
+        volume=streamer.get_volume(),
     )
-    if not streamer.is_playing(channel_idx):
+    if not streamer.is_playing():
         print('Play Pressed')
         event_queue.append(PlayEvent(channel_state=channel_state))
     else:
@@ -22,10 +22,10 @@ def playButtonTapped(channel_idx, event_queue, streamer):
 def didSeekTo(channel_idx, event_queue, seek_value, streamer):
     channel_state = ChannelState(
         idx=channel_idx,
-        last_timestamp=streamer.get_last_time(channel_idx),
+        last_timestamp=streamer.get_last_time(),
         timestamp=seek_value,
-        playing=streamer.is_playing(channel_idx),
-        volume=streamer.get_volume(channel_idx),
+        playing=streamer.is_playing(),
+        volume=streamer.get_volume(),
     )
     print('Did seek to: ' + str(seek_value))
     event_queue.append(SeekEvent(channel_state=channel_state))
@@ -35,9 +35,9 @@ def didSeekTo(channel_idx, event_queue, seek_value, streamer):
 def didChangeVolumeTo(channel_idx, event_queue, seek_value, streamer):
     channel_state = ChannelState(
         idx=channel_idx,
-        last_timestamp=streamer.get_last_time(channel_idx),
-        timestamp=streamer.get_current_time(channel_idx),
-        playing=streamer.is_playing(channel_idx),
+        last_timestamp=streamer.get_last_time(),
+        timestamp=streamer.get_current_time(),
+        playing=streamer.is_playing(),
         volume=seek_value,
     )
     print('Did change volume to: ' + str(seek_value))

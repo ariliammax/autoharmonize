@@ -55,7 +55,8 @@ class Button():
                     self.buttonSurface.fill(self.fillColors['pressed'])
                     if not self.alreadyPressed:
                         self.alreadyPressed = True
-                        self.ui.is_loading = True
+                        self.ui.start_loading()
+                        self.ui.stop_loading()
                         self.onclickFunction(
                             channel_idx=self.ui.channel,
                             event_queue=self.ui.event_queue,
@@ -144,16 +145,18 @@ class Picker:
 
 
 class SeekSlider():
-    def __init__(self, ui, x, y, width, height, min_val, max_val, streamers, stringify, onchangeFunction=None):
+    def __init__(self, ui, x, y, width, height, streamers, get_val, get_max_val, stringify, onchangeFunction=None):
         self.ui = ui
         self.x = x
         self.y = y
         self.width = width
         self.height = height
-        self.min_val = min_val
         self.streamers = streamers
-        self.max_val = max_val or self.streamers[self.ui.channel].get_total_time()
-        self.value = self.streamers[self.ui.channel].get_current_time()
+        self.get_val = get_val
+        self.get_max_val = get_max_val
+        self.min_val = 0
+        self.max_val = get_max_val(self.streamers[self.ui.channel])
+        self.value = get_val(self.streamers[self.ui.channel])
         self.onchangeFunction = onchangeFunction
         self.isDragging = False
         self.stringify = stringify
@@ -173,7 +176,7 @@ class SeekSlider():
         mousePos = pygame.mouse.get_pos()
         self.sliderSurface.fill(self.fillColors['background'])
 
-        self.max_val = self.streamers[self.ui.channel].get_total_time()
+        self.max_val = self.get_max_val(self.streamers[self.ui.channel])
         range = self.max_val - self.min_val
         knob_x = int(((self.value - self.min_val) / range) * (self.width - self.height))
 
@@ -212,7 +215,8 @@ class SeekSlider():
 
                     # call the onchange function if it exists
                     if self.onchangeFunction is not None:
-                        self.ui.is_loading = True
+                        self.ui.start_loading()
+                        self.ui.stop_loading()
                         self.onchangeFunction(
                             channel_idx=self.ui.channel,
                             event_queue=self.ui.event_queue,
@@ -220,11 +224,11 @@ class SeekSlider():
                             streamer=self.streamers[self.ui.channel],
                         )
                 else:
-                    self.value = self.streamers[self.ui.channel].get_current_time()
+                    self.value = self.get_val(self.streamers[self.ui.channel])
                     # update the position of the knob based on the new value
                     knob_x = int(((self.value - self.min_val) / range) * (self.width - self.height))
             else:
-                self.value = self.streamers[self.ui.channel].get_current_time()
+                self.value = self.get_val(self.streamers[self.ui.channel])
                 # update the position of the knob based on the new value
                 knob_x = int(((self.value - self.min_val) / range) * (self.width - self.height))
   
@@ -281,8 +285,8 @@ class UI():
         Loader(self, 0, 0, 50, 0.1)
         Button(self, 120, 190, 400, 100, "Play", "Pause", streamers, playButtonTapped)
         Picker(self, 120, 300, 400, 100, 0, 0, Streamer.get_num_channels() - 1, streamers, None)
-        SeekSlider(self, 0, UIConfig.SCREEN_HEIGHT - 70, 640, 50, 0, None, streamers, self.stringify_time, didSeekTo)
-        SeekSlider(self, (UIConfig.SCREEN_WIDTH / 2) - (300 / 2), songTitleRect.height + 70, 300, 50, 0, 100, streamers, self.stringify_volume, didChangeVolumeTo)
+        SeekSlider(self, 0, UIConfig.SCREEN_HEIGHT - 70, 640, 50, streamers, (lambda s: s.get_current_time()), (lambda s: s.get_total_time()), self.stringify_time, didSeekTo)
+        SeekSlider(self, (UIConfig.SCREEN_WIDTH / 2) - (300 / 2), songTitleRect.height + 70, 300, 50, streamers, (lambda s: s.get_volume()), (lambda s: 100), self.stringify_volume, didChangeVolumeTo)
 
         while True:
             title = streamers[self.channel].get_title()
@@ -316,6 +320,9 @@ class UI():
             return "MAX"
         else:
             return str(int(volume))
+
+    def start_loading(self):
+        self.is_loading = True
 
     def stop_loading(self):
         self.is_loading = False
