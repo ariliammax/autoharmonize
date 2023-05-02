@@ -129,7 +129,6 @@ def metronome(sockets: List[socket],
         than `Config.HEARTBEAT_TIMEOUT`.
     """
     start_t = time.time()
-    start_t_ms = int(1000 * start_t)
 
     # TODO: locking
     up_machine_addresses=[machine
@@ -142,6 +141,8 @@ def metronome(sockets: List[socket],
         [[event for event in ui_manager.event_queue[::-1]
           if event.get_channel_state().get_idx() == idx]
          for idx in range(ui_manager.streamer.get_num_channels())]
+    if len(ui_mananger.event_queue) > 0:
+        ui_manager.stop_loading()
     ui_manager.event_queue.clear()
     channel_events_states = \
         [latest_events[idx][0] if len(latest_events[idx]) > 0 else NoneEvent()
