@@ -16,6 +16,7 @@ def playButtonTapped(channel_idx, event_queue, streamer):
     else:
         print('Pause Pressed')
         event_queue.append(PauseEvent(channel_state=channel_state))
+    streamer.sync(channel_state)
     return event_queue
 
 
@@ -29,6 +30,7 @@ def didSeekTo(channel_idx, event_queue, seek_value, streamer):
     )
     print('Did seek to: ' + str(seek_value))
     event_queue.append(SeekEvent(channel_state=channel_state))
+    streamer.sync(channel_state)
     return event_queue
 
 
@@ -42,4 +44,5 @@ def didChangeVolumeTo(channel_idx, event_queue, seek_value, streamer):
     )
     print('Did change volume to: ' + str(seek_value))
     event_queue.append(VolumeEvent(channel_state=channel_state))
+    streamer.sync(channel_state)
     return event_queue

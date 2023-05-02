@@ -3,7 +3,7 @@
 
 from synfony.callbacks import *
 from synfony.config import UIConfig
-from synfony.streamer import LocalMusicStreamer, Streamer
+from synfony.streamer import AllStreamer, LocalMusicStreamer, Streamer
 
 import math
 import pygame
@@ -274,6 +274,7 @@ class UI():
         pygame.init()
 
         streamers = [LocalMusicStreamer(i) for i in range(Streamer.get_num_channels())]
+        streamers.append(AllStreamer(list(streamers)))
         Streamer.init()
 
         title = streamers[0].get_title()
@@ -284,7 +285,7 @@ class UI():
 
         Loader(self, 0, 0, 50, 0.1)
         Button(self, 120, 190, 400, 100, "Play", "Pause", streamers, playButtonTapped)
-        Picker(self, 120, 300, 400, 100, 0, 0, Streamer.get_num_channels() - 1, streamers, None)
+        Picker(self, 120, 300, 400, 100, 0, 0, Streamer.get_num_channels(), streamers, None)
         SeekSlider(self, 0, UIConfig.SCREEN_HEIGHT - 70, 640, 50, streamers, (lambda s: s.get_current_time()), (lambda s: s.get_total_time()), self.stringify_time, didSeekTo)
         SeekSlider(self, (UIConfig.SCREEN_WIDTH / 2) - (300 / 2), songTitleRect.height + 70, 300, 50, streamers, (lambda s: s.get_volume()), (lambda s: 100), self.stringify_volume, didChangeVolumeTo)
 

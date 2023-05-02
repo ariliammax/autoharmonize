@@ -38,11 +38,13 @@ class Streamer(ABC):
     def get_num_channels(self):
         return len(Config.CHANNELS)
 
+    @abstractmethod
     def get_title(self):
-        return Config.CHANNELS[self.channel_id][0]
+        pass
 
+    @abstractmethod
     def get_total_time(self):
-        return Config.CHANNELS[self.channel_id][1] * Config.CHANNELS[self.channel_id][2]
+        pass
 
     @abstractmethod
     def get_volume(self):
@@ -68,6 +70,52 @@ class Streamer(ABC):
     def shutdown(self):
         pygame.mixer.stop()
         pygame.mixer.quit()
+
+
+class AllStreamer(Streamer):
+    def __init__(self, streamers):
+        super().__init__(-1)
+        self.streamers = streamers
+
+    def event(self, event):
+        for streamer in self.streamers:
+            streamer.event(event)
+
+    def get_chunk(self, chunk):
+        assert False
+
+    def get_current_time(self):
+        current_times = [streamer.get_current_time() for streamer in self.streamers]
+        return sum(current_times) / len(current_times)
+
+    def get_last_time(self):
+        last_times = [streamer.get_last_time() for streamer in self.streamers]
+        return max(last_times)
+
+    def get_title(self):
+        return "ALL"
+
+    def get_total_time(self):
+        total_times = [streamer.get_total_time() for streamer in self.streamers]
+        return min(total_times)
+
+    def get_volume(self):
+        volumes = [streamer.get_volume() for streamer in self.streamers]
+        return sum(volumes) / len(volumes)
+
+    def is_playing(self):
+        is_playings = [streamer.is_playing() for streamer in self.streamers]
+        return True in is_playings
+
+    def schedule_seek(self, chunk, interval, playing):
+        assert False
+
+    def seek(self, chunk, playing):
+        assert False
+
+    def sync(self, state):
+        for streamer in self.streamers:
+            streamer.sync(state)
 
 
 class LocalMusicStreamer(Streamer):
@@ -125,6 +173,12 @@ class LocalMusicStreamer(Streamer):
 
     def get_last_time(self):
         return self.last_timestamp
+
+    def get_title(self):
+        return Config.CHANNELS[self.channel_id][0]
+
+    def get_total_time(self):
+        return Config.CHANNELS[self.channel_id][1] * Config.CHANNELS[self.channel_id][2]
 
     def get_volume(self):
         return self.volume
