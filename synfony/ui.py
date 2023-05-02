@@ -3,14 +3,14 @@
 
 from synfony.callbacks import *
 from synfony.config import UIConfig
-from synfony.streamer import LocalMusicStreamer
+from synfony.streamer import LocalMusicStreamer, Streamer
 
 import math
 import pygame
 
 
 class Button():
-    def __init__(self, ui, x, y, width, height, txt, selectedTxt, isSelectedFunction=None, onclickFunction=None):
+    def __init__(self, ui, x, y, width, height, txt, selectedTxt, streamers, onclickFunction=None):
         self.ui = ui
         self.x = x
         self.y = y
@@ -19,7 +19,7 @@ class Button():
         self.onclickFunction = onclickFunction
         self.alreadyPressed = False
         self.isSelected = False
-        self.isSelectedFunction = isSelectedFunction
+        self.streamers = streamers
         self.txt = txt
         self.selectedTxt = selectedTxt
         self.font = pygame.font.SysFont('Arial', 40)
@@ -36,13 +36,12 @@ class Button():
         self.buttonSurf = self.font.render("Play", True, (20, 20, 20))
         self.ui.objects.append(self)
         
-    def process(self, streamer):
+    def process(self):
         mousePos = pygame.mouse.get_pos()
         self.buttonSurface.fill(self.fillColors['normal'])
 
         # Set the state of the button
-        if (self.isSelectedFunction != None):
-            self.isSelected = self.isSelectedFunction(self.ui.channel)
+        self.isSelected = self.streamers[self.ui.channel].is_playing()
 
         if (self.isSelected):
             self.buttonSurf = self.font.render(self.selectedTxt, True, (20, 20, 20))
@@ -60,7 +59,7 @@ class Button():
                         self.onclickFunction(
                             channel_idx=self.ui.channel,
                             event_queue=self.ui.event_queue,
-                            streamer=streamer
+                            streamer=self.streamers[self.ui.channel],
                         )
                 else:
                     self.alreadyPressed = False
@@ -72,7 +71,7 @@ class Button():
 
 
 class Picker:
-    def __init__(self, ui, x, y, width, height, initial_value, min_value, max_value, onchange_function=None):
+    def __init__(self, ui, x, y, width, height, initial_value, min_value, max_value, streamers, onchange_function=None):
         self.ui = ui
         self.x = x
         self.y = y
@@ -99,7 +98,7 @@ class Picker:
             self.height,
             '<',
             '<',
-            None,
+            streamers,
             self._decrement
         )
 
@@ -111,7 +110,7 @@ class Picker:
             self.height,
             '>',
             '>',
-            None,
+            streamers,
             self._increment
         )
 
@@ -140,22 +139,21 @@ class Picker:
             if self.onchange_function is not None:
                 self.onchange_function(self.value)
     
-    def process(self, streamer):
+    def process(self):
       self.ui.screen.blit(self.value_surface, self.value_rect)
 
 
 class SeekSlider():
-    def __init__(self, ui, x, y, width, height, min_val, get_max_val, get_current_val, stringify, onchangeFunction=None):
+    def __init__(self, ui, x, y, width, height, min_val, max_val, streamers, stringify, onchangeFunction=None):
         self.ui = ui
         self.x = x
         self.y = y
         self.width = width
         self.height = height
         self.min_val = min_val
-        self.get_max_val = get_max_val
-        self.max_val = get_max_val(ui.channel)
-        self.value = get_current_val(ui.channel)
-        self.get_current_val = get_current_val
+        self.streamers = streamers
+        self.max_val = max_val or self.streamers[self.ui.channel].get_total_time()
+        self.value = self.streamers[self.ui.channel].get_current_time()
         self.onchangeFunction = onchangeFunction
         self.isDragging = False
         self.stringify = stringify
@@ -171,11 +169,11 @@ class SeekSlider():
         self.sliderRect = pygame.Rect(self.x, self.y, self.width, self.height)
         ui.objects.append(self)
 
-    def process(self, streamer):
+    def process(self):
         mousePos = pygame.mouse.get_pos()
         self.sliderSurface.fill(self.fillColors['background'])
 
-        self.max_val = self.get_max_val(self.ui.channel)
+        self.max_val = self.streamers[self.ui.channel].get_total_time()
         range = self.max_val - self.min_val
         knob_x = int(((self.value - self.min_val) / range) * (self.width - self.height))
 
@@ -219,14 +217,14 @@ class SeekSlider():
                             channel_idx=self.ui.channel,
                             event_queue=self.ui.event_queue,
                             seek_value=self.value,
-                            streamer=streamer
+                            streamer=self.streamers[self.ui.channel],
                         )
                 else:
-                    self.value = self.get_current_val(self.ui.channel)
+                    self.value = self.streamers[self.ui.channel].get_current_time()
                     # update the position of the knob based on the new value
                     knob_x = int(((self.value - self.min_val) / range) * (self.width - self.height))
             else:
-                self.value = self.get_current_val(self.ui.channel)
+                self.value = self.streamers[self.ui.channel].get_current_time()
                 # update the position of the knob based on the new value
                 knob_x = int(((self.value - self.min_val) / range) * (self.width - self.height))
   
@@ -251,7 +249,7 @@ class Loader:
         self.rect = pygame.Rect(x, y, size, size)
         self.ui.objects.append(self)
     
-    def process(self, streamer):
+    def process(self):
         self.surface.fill((0, 0, 0))
         pygame.draw.arc(self.surface, self.color, (0, 0, self.size, self.size), 
                         self.angle, self.angle + math.pi/2, int(self.size/8))
@@ -271,35 +269,35 @@ class UI():
     def init(self):
         pygame.init()
 
-        streamer = LocalMusicStreamer()
-        streamer.init()
+        streamers = [LocalMusicStreamer(i) for i in range(Streamer.get_num_channels())]
+        Streamer.init()
 
-        title = streamer.get_title(self.channel)
+        title = streamers[0].get_title()
         songTitleSurface = pygame.font.SysFont('Arial', 40).render(title, True, (255, 255, 255))
         songTitleRect = songTitleSurface.get_rect()
         songTitleRect.x = (UIConfig.SCREEN_WIDTH / 2) - (songTitleRect.width / 2)
         songTitleRect.y = 0
 
         Loader(self, 0, 0, 50, 0.1)
-        Button(self, 120, 190, 400, 100, "Play", "Pause", streamer.is_playing, playButtonTapped)
-        Picker(self, 120, 300, 400, 100, 0, 0, streamer.get_num_channels() - 1, None)
-        SeekSlider(self, 0, UIConfig.SCREEN_HEIGHT - 70, 640, 50, 0, streamer.get_total_time, streamer.get_current_time, self.stringify_time, didSeekTo)
-        SeekSlider(self, (UIConfig.SCREEN_WIDTH / 2) - (300 / 2), songTitleRect.height + 70, 300, 50, 0, (lambda _: 100), streamer.get_volume, self.stringify_volume, didChangeVolumeTo)
+        Button(self, 120, 190, 400, 100, "Play", "Pause", streamers, playButtonTapped)
+        Picker(self, 120, 300, 400, 100, 0, 0, Streamer.get_num_channels() - 1, streamers, None)
+        SeekSlider(self, 0, UIConfig.SCREEN_HEIGHT - 70, 640, 50, 0, None, streamers, self.stringify_time, didSeekTo)
+        SeekSlider(self, (UIConfig.SCREEN_WIDTH / 2) - (300 / 2), songTitleRect.height + 70, 300, 50, 0, 100, streamers, self.stringify_volume, didChangeVolumeTo)
 
         while True:
-            title = streamer.get_title(self.channel)
+            title = streamers[self.channel].get_title()
             songTitleSurface = pygame.font.SysFont('Arial', 40).render(title, True, (255, 255, 255))
             self.screen.fill((0, 0, 0))
             self.screen.blit(songTitleSurface, songTitleRect)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    streamer.shutdown()
+                    Streamer.shutdown()
                     pygame.quit()
                     exit()
                 else:
-                    streamer.event(event)
+                    streamers[0].event(event)
             for object in self.objects:
-                object.process(streamer)
+                object.process()
             pygame.display.flip()
             self.fpsClock.tick(UIConfig.fps)
     

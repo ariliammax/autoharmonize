@@ -11,14 +11,13 @@ class Config:
         ["The Turn Down/other", 100, 1.4929],
         ["The Turn Down/vocals", 100, 1.4929],
     ]
-    MACHINES = ['localhost:10012',
-                'localhost:20012',
-                'localhost:30012']
-
     INT_MAX_LEN = 1 << 64
     LIST_MAX_LEN = 255
-    STR_MAX_LEN = 280
+    MACHINES = ['localhost:10000',
+                'localhost:20000',
+                'localhost:30000']
     PACKET_MAX_LEN = 1024
+    STR_MAX_LEN = 280
 
     HANDSHAKE_TIMEOUT = 0.1
     HANDSHAKE_INTERVAL = 1.001

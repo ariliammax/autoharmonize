@@ -11,226 +11,190 @@ import pygame
 
 
 class Streamer(ABC):
-    @abstractmethod
-    def __init__(self):
-        pass
+    def __init__(self, channel_id):
+        self.channel_id = channel_id
 
-    @abstractmethod
-    def init(self):
-        pass
-
-    @abstractmethod
-    def event(self, event):
-        pass
-
-    @abstractmethod
-    def get_last_time(self, channel_id):
-        pass
-
-    @abstractmethod
-    def get_chunk(self, channel_id, chunk):
-        pass
-
-    @abstractmethod
-    def get_current_time(self, channel_id):
-        pass
-
-    @abstractmethod
-    def get_num_channels(self):
-        pass
-
-    @abstractmethod
-    def get_title(self, channel_id):
-        pass
-
-    @abstractmethod
-    def get_total_time(self, channel_id):
-        pass
-
-    @abstractmethod
-    def get_volume(self, channel_id):
-        pass
-
-    @abstractmethod
-    def is_playing(self, channel_id):
-        pass
-
-    @abstractmethod
-    def schedule_seek(self, channel_id, chunk, interval, playing):
-        pass
-
-    @abstractmethod
-    def seek(self, channel_id, chunk, playing):
-        pass
-
-    @abstractmethod
-    def sync(self, states):
-        pass
-
-    @abstractmethod
-    def shutdown(self):
-        pass
-
-
-class LocalMusicStreamer(Streamer):
-    last_timestamp = []
-    current_chunk_index = []
-    current_chunk_realtime = []
-    current_chunk_timestamp = []
-    playing = []
-    timer = []
-    volume = []
-
-    def __init__(self):
-        self.last_timestamp = [0.0 for _ in range(len(Config.CHANNELS))]
-        self.current_chunk_index = [1 for _ in range(len(Config.CHANNELS))]
-        self.current_chunk_realtime = [time() for _ in range(len(Config.CHANNELS))]
-        self.current_chunk_timestamp = [0.0 for _ in range(len(Config.CHANNELS))]
-        self.playing = [True for _ in range(len(Config.CHANNELS))]
-        self.timer = [None for _ in range(len(Config.CHANNELS))]
-        self.volume = [50 for _ in range(len(Config.CHANNELS))]
-
+    @classmethod
     def init(self):
         pygame.mixer.init()
-        for channel_id in range(len(Config.CHANNELS)):
-            channel = pygame.mixer.Channel(channel_id)
-            channel.set_endevent(pygame.USEREVENT + channel_id)
-            chunk = 1
-            sound = self.get_chunk(channel_id, chunk)
-            if sound is None:
-                interval = Config.CHANNELS[channel_id][2]
-                self.schedule_seek(channel_id, chunk, interval, True)
-            else:
-                channel.play(sound)
-                self.current_chunk_realtime[channel_id] = time()
 
+    @abstractmethod
     def event(self, event):
-        channel_id = event.type - pygame.USEREVENT
-        if channel_id < 0 or channel_id >= len(Config.CHANNELS):
-            return
-        chunk = self.current_chunk_index[channel_id] + 1
-        if chunk > Config.CHANNELS[channel_id][1]:
-            chunk = 1
-        sound = self.get_chunk(channel_id, chunk)
-        if sound is None:
-            interval = Config.CHANNELS[channel_id][2]
-            self.schedule_seek(channel_id, chunk, interval, True)
-        else:
-            channel = pygame.mixer.Channel(channel_id)
-            channel.queue(sound)
-            self.current_chunk_index[channel_id] = chunk
-            self.current_chunk_realtime[channel_id] = time()
-            self.current_chunk_timestamp[channel_id] = 0.0
+        pass
 
-    def get_last_time(self, channel_id):
-        return self.last_timestamp[channel_id]
+    @abstractmethod
+    def get_chunk(self, chunk):
+        pass
 
-    def get_chunk(self, channel_id, chunk):
-        file = Config.CHANNELS[channel_id][0]
-        chunk_str = str(chunk) if chunk > 9 else "0" + str(chunk)
-        return pygame.mixer.Sound(file + "-" + chunk_str + ".mp3")
+    @abstractmethod
+    def get_current_time(self):
+        pass
 
-    def get_current_time(self, channel_id):
-        inter_chunk_offset = (self.current_chunk_index[channel_id] - 1) * Config.CHANNELS[channel_id][2]
-        intra_chunk_offset = self.current_chunk_timestamp[channel_id]
-        realtime_offset = time() - self.current_chunk_realtime[channel_id]
-        if not self.playing[channel_id]:
-            realtime_offset = 0.0
-        return inter_chunk_offset + intra_chunk_offset + realtime_offset
+    @abstractmethod
+    def get_last_time(self):
+        pass
 
+    @classmethod
     def get_num_channels(self):
         return len(Config.CHANNELS)
 
-    def get_title(self, channel_id):
-        return Config.CHANNELS[channel_id][0]
+    def get_title(self):
+        return Config.CHANNELS[self.channel_id][0]
 
-    def get_total_time(self, channel_id):
-        return Config.CHANNELS[channel_id][1] * Config.CHANNELS[channel_id][2]
+    def get_total_time(self):
+        return Config.CHANNELS[self.channel_id][1] * Config.CHANNELS[self.channel_id][2]
 
-    def get_volume(self, channel_id):
-        return self.volume[channel_id]
+    @abstractmethod
+    def get_volume(self):
+        pass
 
-    def is_playing(self, channel_id):
-        return self.playing[channel_id]
+    @abstractmethod
+    def is_playing(self):
+        pass
 
-    def schedule_seek(self, channel_id, chunk, interval, playing):
-        chunk += 1
-        if chunk > Config.CHANNELS[channel_id][1]:
-            chunk = 1
-        self.current_chunk_index[channel_id] = chunk
-        self.current_chunk_timestamp[channel_id] = 0.0
-        self.playing[channel_id] = False
-        self.timer[channel_id] = Timer(interval, self.seek, [
-            channel_id,
-            chunk,
-            playing,
-        ])
-        self.timer[channel_id].start()
+    @abstractmethod
+    def schedule_seek(self, chunk, interval, playing):
+        pass
 
-    def seek(self, channel_id, chunk, playing):
-        self.current_chunk_index[channel_id] = chunk
-        self.current_chunk_timestamp[channel_id] = 0.0
-        self.playing[channel_id] = playing
-        self.timer[channel_id] = None
-        sound = self.get_chunk(channel_id, chunk)
-        if sound is None:
-            interval = Config.CHANNELS[channel_id][2]
-            self.schedule_seek(channel_id, chunk, interval, playing)
-        else:
-            channel = pygame.mixer.Channel(channel_id)
-            channel.set_endevent(pygame.USEREVENT + len(Config.CHANNELS))
-            channel.play(sound)
-            if playing:
-                self.current_chunk_realtime[channel_id] = time()
-            else:
-                channel.pause()
-            channel.set_endevent(pygame.USEREVENT + channel_id)
+    @abstractmethod
+    def seek(self, chunk, playing):
+        pass
 
-    def sync(self, states: list[ChannelState]):
-        for channel_state in states:
-            channel_id = channel_state.get_idx()
-            playing = channel_state.get_playing()
-            timestamp = channel_state.get_timestamp()
-            volume = channel_state.get_volume()
-            self.last_timestamp[channel_id] = \
-                channel_state.get_last_timestamp()  # ?
-            chunk = 1
-            delay = abs(timestamp - self.get_current_time(channel_id))
-            while timestamp > Config.CHANNELS[channel_id][2]:
-                timestamp -= Config.CHANNELS[channel_id][2]
-                chunk += 1
-            channel = pygame.mixer.Channel(channel_id)
-            if delay > Config.TOLERABLE_DELAY or self.timer[channel_id] is not None:
-                if self.timer[channel_id]:
-                    self.timer[channel_id].cancel()
-                channel.set_endevent(pygame.USEREVENT + len(Config.CHANNELS))
-                channel.stop()
-                channel.set_endevent(pygame.USEREVENT + channel_id)
-                interval = Config.CHANNELS[channel_id][2] - timestamp
-                self.schedule_seek(channel_id, chunk, interval, playing)
-            elif self.playing[channel_id] and not playing:
-                channel.pause()
-                self.current_chunk_timestamp[channel_id] = time() - self.current_chunk_realtime[channel_id]
-                self.playing[channel_id] = False
-            elif not self.playing[channel_id] and playing:
-                channel.unpause()
-                self.current_chunk_realtime[channel_id] = time()
-                self.playing[channel_id] = True
-            self.volume[channel_id] = volume
-            channel.set_volume(volume)
+    @abstractmethod
+    def sync(self, state):
+        pass
 
+    @classmethod
     def shutdown(self):
         pygame.mixer.stop()
         pygame.mixer.quit()
 
 
+class LocalMusicStreamer(Streamer):
+    current_chunk_index = 1
+    current_chunk_realtime = 0.0
+    current_chunk_timestamp = 0.0
+    last_timestamp = 0.0
+    playing = True
+    timer = None
+    volume = 50
+
+    def __init__(self, channel_id):
+        super().__init__(channel_id)
+        channel = pygame.mixer.Channel(channel_id)
+        channel.set_endevent(pygame.USEREVENT + channel_id)
+        chunk = 1
+        sound = self.get_chunk(chunk)
+        if sound is None:
+            interval = Config.CHANNELS[channel_id][2]
+            self.schedule_seek(chunk, interval, True)
+        else:
+            channel.play(sound)
+            self.current_chunk_realtime = time()
+
+    def event(self, event):
+        channel_id = event.type - pygame.USEREVENT
+        if channel_id != self.channel_id:
+            return
+        chunk = self.current_chunk_index + 1
+        if chunk > Config.CHANNELS[self.channel_id][1]:
+            chunk = 1
+        sound = self.get_chunk(chunk)
+        if sound is None:
+            interval = Config.CHANNELS[self.channel_id][2]
+            self.schedule_seek(chunk, interval, True)
+        else:
+            channel = pygame.mixer.Channel(self.channel_id)
+            channel.queue(sound)
+            self.current_chunk_index = chunk
+            self.current_chunk_realtime = time()
+            self.current_chunk_timestamp = 0.0
+
+    def get_chunk(self, chunk):
+        file = Config.CHANNELS[self.channel_id][0]
+        chunk_str = str(chunk) if chunk > 9 else "0" + str(chunk)
+        return pygame.mixer.Sound(file + "-" + chunk_str + ".mp3")
+
+    def get_current_time(self):
+        inter_chunk_offset = (self.current_chunk_index - 1) * Config.CHANNELS[self.channel_id][2]
+        intra_chunk_offset = self.current_chunk_timestamp
+        realtime_offset = time() - self.current_chunk_realtime
+        if not self.playing:
+            realtime_offset = 0.0
+        return inter_chunk_offset + intra_chunk_offset + realtime_offset
+
+    def get_last_time(self):
+        return self.last_timestamp
+
+    def get_volume(self):
+        return self.volume
+
+    def is_playing(self):
+        return self.playing
+
+    def schedule_seek(self, chunk, interval, playing):
+        chunk += 1
+        if chunk > Config.CHANNELS[self.channel_id][1]:
+            chunk = 1
+        self.current_chunk_index = chunk
+        self.current_chunk_timestamp = 0.0
+        self.playing = False
+        self.timer = Timer(interval, self.seek, [
+            chunk,
+            playing,
+        ])
+        self.timer.start()
+
+    def seek(self, chunk, playing):
+        self.current_chunk_index = chunk
+        self.current_chunk_timestamp = 0.0
+        self.playing = playing
+        self.timer = None
+        sound = self.get_chunk(chunk)
+        if sound is None:
+            interval = Config.CHANNELS[self.channel_id][2]
+            self.schedule_seek(chunk, interval, playing)
+        else:
+            channel = pygame.mixer.Channel(self.channel_id)
+            channel.set_endevent(pygame.USEREVENT + len(Config.CHANNELS))
+            channel.play(sound)
+            if playing:
+                self.current_chunk_realtime = time()
+            else:
+                channel.pause()
+            channel.set_endevent(pygame.USEREVENT + self.channel_id)
+
+    def sync(self, state: ChannelState):
+        last_timestamp = state.get_last_timestamp()
+        playing = state.get_playing()
+        timestamp = state.get_timestamp()
+        volume = state.get_volume()
+        chunk = 1
+        delay = abs(timestamp - self.get_current_time())
+        while timestamp > Config.CHANNELS[self.channel_id][2]:
+            timestamp -= Config.CHANNELS[self.channel_id][2]
+            chunk += 1
+        channel = pygame.mixer.Channel(self.channel_id)
+        if delay > Config.TOLERABLE_DELAY or self.timer is not None:
+            if self.timer:
+                self.timer.cancel()
+            channel.set_endevent(pygame.USEREVENT + len(Config.CHANNELS))
+            channel.stop()
+            channel.set_endevent(pygame.USEREVENT + self.channel_id)
+            interval = Config.CHANNELS[self.channel_id][2] - timestamp
+            self.schedule_seek(chunk, interval, playing)
+        elif self.playing and not playing:
+            channel.pause()
+            self.current_chunk_timestamp = time() - self.current_chunk_realtime
+            self.playing = False
+        elif not self.playing and playing:
+            channel.unpause()
+            self.current_chunk_realtime = time()
+            self.playing = True
+        self.last_timestamp = last_timestamp
+        self.volume = volume
+        channel.set_volume(volume)
+
+
 class RemoteMusicStreamer(Streamer):
-    pass
-
-
-class LocalMIDIStreamer(Streamer):
-    pass
-
-
-class RemoteMIDIStreamer(Streamer):
     pass
