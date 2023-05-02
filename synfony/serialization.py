@@ -5,6 +5,8 @@ from math import log
 from synfony.config import Config
 from typing import Callable, Optional
 
+import struct
+
 
 # this is supposed to be ceiling(log_2(...) / 8), but too lazy to calculate
 # that.
@@ -14,6 +16,8 @@ from typing import Callable, Optional
 # number of `char`s.
 # anyways, this isn't exactly that, but a safe over-approximation.
 
+# the number of bits taken up in serializing an `int` using `chr`s
+FLOAT_LEN_BYTES = 4
 # the number of bits taken up in serializing an `int` using `chr`s
 INT_LEN_BYTES = int(log(Config.INT_MAX_LEN) / 8) + 1
 # the number of bits taken up in serializing an `int` encoding a `list`'s `len`
@@ -44,13 +48,13 @@ class SerializationUtils:
     def deserialize_float(data: bytes) -> float:
         """Deserialize `bytes` into an `float`.
         """
-        return struct.unpack('f', data[:min(length, len(data))])
+        return struct.unpack('f', data[:min(FLOAT_LEN_BYTES, len(data))])[0]
 
     @staticmethod
     def serialize_float(val: float) -> bytes:
         """Serialize an `float` into a `bytes`.
         """
-        return struct.pack('f', val)
+        return struct.pack('f', float(val))
 
     @staticmethod
     def deserialize_int(data: bytes, length: int = INT_LEN_BYTES) -> int:

@@ -268,29 +268,30 @@ class UI():
     fpsClock = pygame.time.Clock()
     objects = []
     screen = pygame.display.set_mode((UIConfig.SCREEN_WIDTH, UIConfig.SCREEN_HEIGHT))
+    streamers = []
     is_loading = False
 
     def init(self):
         pygame.init()
 
-        streamers = [LocalMusicStreamer(i) for i in range(Streamer.get_num_channels())]
-        streamers.append(AllStreamer(list(streamers)))
+        self.streamers = [LocalMusicStreamer(i) for i in range(Streamer.get_num_channels())]
+        self.streamers.append(AllStreamer(list(self.streamers)))
         Streamer.init()
 
-        title = streamers[0].get_title()
+        title = self.streamers[0].get_title()
         songTitleSurface = pygame.font.SysFont('Arial', 40).render(title, True, (255, 255, 255))
         songTitleRect = songTitleSurface.get_rect()
         songTitleRect.x = (UIConfig.SCREEN_WIDTH / 2) - (songTitleRect.width / 2)
         songTitleRect.y = 0
 
         Loader(self, 0, 0, 50, 0.1)
-        Button(self, 120, 190, 400, 100, "Play", "Pause", streamers, playButtonTapped)
-        Picker(self, 120, 300, 400, 100, 0, 0, Streamer.get_num_channels(), streamers, None)
-        SeekSlider(self, 0, UIConfig.SCREEN_HEIGHT - 70, 640, 50, streamers, (lambda s: s.get_current_time()), (lambda s: s.get_total_time()), self.stringify_time, didSeekTo)
-        SeekSlider(self, (UIConfig.SCREEN_WIDTH / 2) - (300 / 2), songTitleRect.height + 70, 300, 50, streamers, (lambda s: s.get_volume()), (lambda s: 100), self.stringify_volume, didChangeVolumeTo)
+        Button(self, 120, 190, 400, 100, "Play", "Pause", self.streamers, playButtonTapped)
+        Picker(self, 120, 300, 400, 100, 0, 0, Streamer.get_num_channels(), self.streamers, None)
+        SeekSlider(self, 0, UIConfig.SCREEN_HEIGHT - 70, 640, 50, self.streamers, (lambda s: s.get_current_time()), (lambda s: s.get_total_time()), self.stringify_time, didSeekTo)
+        SeekSlider(self, (UIConfig.SCREEN_WIDTH / 2) - (300 / 2), songTitleRect.height + 70, 300, 50, self.streamers, (lambda s: s.get_volume()), (lambda s: 100), self.stringify_volume, didChangeVolumeTo)
 
         while True:
-            title = streamers[self.channel].get_title()
+            title = self.streamers[self.channel].get_title()
             songTitleSurface = pygame.font.SysFont('Arial', 40).render(title, True, (255, 255, 255))
             self.screen.fill((0, 0, 0))
             self.screen.blit(songTitleSurface, songTitleRect)
@@ -300,7 +301,7 @@ class UI():
                     pygame.quit()
                     exit()
                 else:
-                    streamers[0].event(event)
+                    self.streamers[0].event(event)
             for object in self.objects:
                 object.process()
             pygame.display.flip()

@@ -40,7 +40,7 @@ class BaseEvent(Model.model_with_fields(event_code=int)):
         """Peek at the first byte of some `bytes` to determine the
             `EventCode`.
         """
-        return EventCode(BaseRequest.deserialize_event_code(data[:1]))
+        return EventCode(BaseEvent.deserialize_event_code(data[:1]))
 
     @classmethod
     def deserialize(cls, data: bytes):
@@ -49,15 +49,15 @@ class BaseEvent(Model.model_with_fields(event_code=int)):
         event_code = EventCode(BaseEvent.peek_event_code(data))
         match event_code:
             case EventCode.NONE:
-                return super(BaseEvent, NoneEvent).deserialize(data)
+                return NoneEvent.deserialize(data)
             case EventCode.PAUSE:
-                return super(BaseEvent, PauseEvent).deserialize(data)
+                return PauseEvent.deserialize(data)
             case EventCode.PLAY:
-                return super(BaseEvent, PlayEvent).deserialize(data)
+                return PlayEvent.deserialize(data)
             case EventCode.SEEK:
-                return super(BaseEvent, SeekEvent).deserialize(data)
+                return SeekEvent.deserialize(data)
             case EventCode.VOLUME:
-                return super(BaseEvent, VolumeEvent).deserialize(data)
+                return VolumeEvent.deserialize(data)
             case _:
                 raise NotImplementedError()
 
@@ -158,7 +158,7 @@ class ChannelState(Model.model_with_fields(
             ordered_events[0].get_channel_state().set_timestamp(
                 ordered_events[0].get_channel_state().get_last_timestamp()
             )
-        if not any_seek:
+        elif not any_seek:
             seek_idxes = [i for i, event in enumerate(ordered_events)
                           if event.get_channel_state().get_playing()]
 
@@ -168,6 +168,17 @@ class ChannelState(Model.model_with_fields(
         if not any_vol:
             vol_idxes = [0]
 
+        if ordered_events[seek_idxes[0]].get_channel_state().get_idx() == 0:
+            print('channelstate',
+                ordered_events[seek_idxes[0]]
+                    .get_channel_state().get_idx(),
+                ordered_events[seek_idxes[0]]
+                    .get_channel_state().get_last_timestamp(),
+                ordered_events[seek_idxes[0]]
+                    .get_channel_state().get_timestamp(),
+                (False if any_pause else (any_play or any_playing)),
+                ordered_events[vol_idxes[0]]
+                    .get_channel_state().get_volume())
         return ChannelState(
             idx=ordered_events[seek_idxes[0]]
                 .get_channel_state().get_idx(),
@@ -198,34 +209,29 @@ MixedChannelState = ChannelState.add_fields(
 
 NoneEvent = BaseEvent.add_fields_with_event_code(
     channel_state=ChannelState,
-    realtime=float,
     event_code=EventCode.NONE
 )
 
 PauseEvent = BaseEvent.add_fields_with_event_code(
     channel_state=ChannelState,
-    realtime=float,
     event_code=EventCode.PAUSE
 )
 
 
 PlayEvent = BaseEvent.add_fields_with_event_code(
     channel_state=ChannelState,
-    realtime=float,
     event_code=EventCode.PLAY
 )
 
 
 SeekEvent = BaseEvent.add_fields_with_event_code(
     channel_state=ChannelState,
-    realtime=float,
     event_code=EventCode.SEEK
 )
 
 
 VolumeEvent = BaseEvent.add_fields_with_event_code(
     channel_state=ChannelState,
-    realtime=float,
     event_code=EventCode.VOLUME
 )
 
@@ -265,7 +271,9 @@ class BaseRequest(Model.model_with_fields(operation_code=int)):
         operation_code = OperationCode(BaseRequest.peek_operation_code(data))
         match operation_code:
             case OperationCode.HEARTBEAT:
-                return super(BaseResponse, HeartbeatRequest).deserialize(data)
+                return HeartbeatRequest.deserialize(data)
+            case OperationCode.IDENTITY:
+                return IdentityRequest.deserialize(data)
             case _:
                 raise NotImplementedError()
 
@@ -307,76 +315,6 @@ class BaseRequest(Model.model_with_fields(operation_code=int)):
         return __impl_class__
 
 
-class BaseResponse(BaseRequest.add_fields(error=str)):
-    """A `Model` which has an `error` field.
-    """
-
-    @staticmethod
-    def deserialize_operation_code(data: bytes) -> int:
-        """Deserialize `bytes` to the `int` value of an `OperationCode`.
-        """
-        return SerializationUtils.deserialize_int(data[:1])
-
-    @staticmethod
-    def serialize_operation_code(val: int) -> bytes:
-        """Serialize the `int` value of an `OperationCode` to `bytes`.
-        """
-        return SerializationUtils.serialize_int(val, length=1)
-
-    @staticmethod
-    def peek_operation_code(data: bytes) -> OperationCode:
-        """Peek at the first byte of some `bytes` to determine the
-            `OperationCode`.
-        """
-        return OperationCode(BaseResponse.deserialize_operation_code(data[:1]))
-
-    @classmethod
-    def deserialize(cls, data: bytes):
-        """Deserialize a `BaseRequest` based on its `operation_code`.
-        """
-        operation_code = OperationCode(BaseResponse.peek_operation_code(data))
-        match operation_code:
-            case OperationCode.HEARTBEAT:
-                return super(BaseResponse, HeartbeatResponse).deserialize(data)
-            case _:
-                raise NotImplementedError()
-
-    @staticmethod
-    def add_fields_with_operation_code(
-            operation_code: int,
-            field_defaults: Dict[str, object] = {},
-            field_deserializers: Dict[str, Callable] = {},
-            field_serializers: Dict[str, Callable] = {},
-            order_of_fields: List[str] = None,
-            fields_list_nested: Dict[str, type] = {},
-            **new_fields: Dict[str, type]):
-        """Creates a new `Model` which also uses an `error` field.
-        """
-
-        class __impl_class__(
-            BaseResponse.add_fields(
-                field_defaults=dict(list(field_defaults.items()) +
-                                    list(dict(operation_code=
-                                              operation_code.value)
-                                         .items())),
-                field_deserializers=dict(list(field_deserializers.items()) +
-                                         [('operation_code',
-                                           BaseResponse
-                                           .deserialize_operation_code)]),
-                field_serializers=dict(list(field_serializers.items()) +
-                                       [('operation_code',
-                                         BaseResponse
-                                         .serialize_operation_code)]),
-                order_of_fields=(order_of_fields or
-                                 (['operation_code'] +
-                                  list(new_fields.keys()))),
-                fields_list_nested=fields_list_nested,
-                **new_fields)):
-            pass
-
-        return __impl_class__
-
-
 HeartbeatRequest = BaseRequest.add_fields_with_operation_code(
     channel_events_states=list,
     machine_addresses=list,
@@ -387,15 +325,9 @@ HeartbeatRequest = BaseRequest.add_fields_with_operation_code(
         machine_addresses=MachineAddress
     )
 )
-HeartbeatResponse = BaseResponse.add_fields_with_operation_code(
-    operation_code=OperationCode.HEARTBEAT
-)
 
 
 IdentityRequest = BaseRequest.add_fields_with_operation_code(
     machine_address=MachineAddress,
     operation_code=OperationCode.IDENTITY
-)
-IdentityResponse = BaseResponse.add_fields_with_operation_code(
-    operation_code=OperationCode.IDENTITY,
 )
