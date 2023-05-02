@@ -61,7 +61,7 @@ class Button():
                     self.buttonSurface.fill(self.fillColors['pressed'])
                     if not self.alreadyPressed:
                         self.alreadyPressed = True
-                        if self.txt == 'Play':
+                        if Config.HANDSHAKE_ENABLED:
                             self.ui.start_loading()
                         self.onclickFunction(
                             channel_idx=self.ui.channel,
@@ -265,7 +265,8 @@ class SeekSlider():
 
                     # call the onchange function if it exists
                     if self.onchangeFunction is not None:
-                        self.ui.start_loading()
+                        if Config.HANDSHAKE_ENABLED:
+                            self.ui.start_loading()
                         if (self.height > self.width):
                             self.onchangeFunction(
                                 channel_idx=self.ui.channel,

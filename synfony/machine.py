@@ -134,7 +134,6 @@ class Machine:
              for c_idx in range(len(ui_manager.streamers))]
         if len(ui_manager.event_queue) > 0:
             print('has events!', my_idx)
-            ui_manager.stop_loading()
         # TODO: lock in UI
         ui_manager.event_queue.clear()
         channel_events_states = \
@@ -240,6 +239,7 @@ class Machine:
                          if event.get_channel_state().get_idx() == c_idx])
          )
          for c_idx in all_channel_idxes]
+        ui_manager.stop_loading()
 
         # 4 - schedule next
         time.sleep(
@@ -353,6 +353,7 @@ class Machine:
             finally:
                 cls.handler(e=None, s=s)
 
-        Thread(target=networking,
-               args=[idx, machine_addresses, ui_manager]).start()
+        if Config.HANDSHAKE_ENABLED:
+            Thread(target=networking,
+                   args=[idx, machine_addresses, ui_manager]).start()
         ui_manager.init(idx)
