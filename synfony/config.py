@@ -12,9 +12,9 @@ class Config:
         # ["The Turn Down/other", 100, 1.4929],  # CHANNEL 2
         ["The Turn Down/vocals", 100, 1.4929], # CHANNEL 3
     ]
-    MACHINES = ['localhost:10035',
-                'localhost:20035',
-                'localhost:30035']
+    MACHINES = ['localhost:10036',
+                'localhost:20036',
+                'localhost:30036']
     STREAMS = [
         # [ADDRESS, CHANNELS]
         ["localhost:10100", [0]],  # [0, 3]], # MACHINE 0

@@ -61,8 +61,8 @@ class Button():
                     self.buttonSurface.fill(self.fillColors['pressed'])
                     if not self.alreadyPressed:
                         self.alreadyPressed = True
-                        self.ui.start_loading()
-                        self.ui.stop_loading()
+                        if self.txt == 'Play':
+                            self.ui.start_loading()
                         self.onclickFunction(
                             channel_idx=self.ui.channel,
                             event_queue=self.ui.event_queue,
@@ -266,7 +266,6 @@ class SeekSlider():
                     # call the onchange function if it exists
                     if self.onchangeFunction is not None:
                         self.ui.start_loading()
-                        self.ui.stop_loading()
                         if (self.height > self.width):
                             self.onchangeFunction(
                                 channel_idx=self.ui.channel,
@@ -345,7 +344,7 @@ class UI():
         self.streamers.append(AllStreamer(list(self.streamers)))
         Streamer.init()
 
-        Loader(self, 0, 0, 50, 0.1)
+        Loader(self, UIConfig.SCREEN_WIDTH / 2 - 25, UIConfig.SCREEN_HEIGHT / 2 - 125, 50, 0.1)
         Picker(self, 0, 0, UIConfig.SCREEN_WIDTH, 50, 0, 0, Streamer.get_num_channels(), self.streamers, None)
         SeekSlider(self, 15, UIConfig.SCREEN_HEIGHT / 2 - 150, 50, 300, self.streamers, (lambda s: s.get_volume()), (lambda s: 100), self.stringify_volume, didChangeVolumeTo)
         Button(self, UIConfig.SCREEN_WIDTH / 2 - 125, UIConfig.SCREEN_HEIGHT / 2 - 50, 250, 100, "Play", "Pause", self.streamers, playButtonTapped)
