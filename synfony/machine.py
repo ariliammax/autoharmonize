@@ -131,7 +131,7 @@ class Machine:
         latest_events = \
             [[event for event in ui_manager.event_queue[::-1]
               if event.get_channel_state().get_idx() == c_idx]
-             for c_idx in range(len(ui_manager.streamers) - 1)]
+             for c_idx in range(len(ui_manager.streamers))]
         if len(ui_manager.event_queue) > 0:
             print('has events!', my_idx)
             ui_manager.stop_loading()
@@ -139,9 +139,8 @@ class Machine:
         ui_manager.event_queue.clear()
         channel_events_states = \
             [latest_events[c_idx][0]
-             if len(latest_events[c_idx]) > 0 else
-             NoneEvent()
-             for c_idx in range(len(ui_manager.streamers) - 1)]
+             for c_idx in range(len(ui_manager.streamers))
+             if len(latest_events[c_idx]) > 0]
         [event.set_channel_state(
             ChannelState(
                 idx=c_idx,
@@ -356,4 +355,4 @@ class Machine:
 
         Thread(target=networking,
                args=[idx, machine_addresses, ui_manager]).start()
-        ui_manager.init()
+        ui_manager.init(idx)
