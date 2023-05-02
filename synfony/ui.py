@@ -334,10 +334,9 @@ class UI():
         self.machine_id = machine_id
         pygame.init()
 
-        #RemoteMusicStream(machine_id)
-        self.streamers = []
+        RemoteMusicStream(machine_id)
         for i in range(Streamer.get_num_channels()):
-            if True or i in Config.STREAMS[self.machine_id][1]:
+            if i in Config.STREAMS[self.machine_id][1]:
                 self.streamers.append(LocalMusicStreamer(i))
             else:
                 self.streamers.append(RemoteMusicStreamer(i))

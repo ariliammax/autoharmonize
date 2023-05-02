@@ -126,7 +126,7 @@ class LocalMusicStreamer(Streamer):
         self.current_chunk_realtime = 0.0
         self.current_chunk_timestamp = 0.0
         self.last_timestamp = 0.0
-        self.playing = True
+        self.playing = False
         self.timer = None
         self.volume = 50
         channel = pygame.mixer.Channel(channel_id)
@@ -135,10 +135,12 @@ class LocalMusicStreamer(Streamer):
         sound = self.get_chunk(chunk)
         if sound is None:
             interval = Config.CHANNELS[channel_id][2]
-            self.schedule_seek(chunk, interval, True)
+            self.schedule_seek(chunk - 1, interval, False)
         else:
+            channel.set_endevent(pygame.USEREVENT + len(Config.CHANNELS))
             channel.play(sound)
-            self.current_chunk_realtime = time()
+            channel.pause()
+            channel.set_endevent(pygame.USEREVENT + channel_id)
 
     def event(self, event):
         channel_id = event.type - pygame.USEREVENT
@@ -207,7 +209,7 @@ class LocalMusicStreamer(Streamer):
         sound = self.get_chunk(chunk)
         if sound is None:
             interval = Config.CHANNELS[self.channel_id][2]
-            self.schedule_seek(chunk, interval, playing)
+            self.schedule_seek(chunk if playing else chunk - 1, interval, playing)
         else:
             channel = pygame.mixer.Channel(self.channel_id)
             channel.set_endevent(pygame.USEREVENT + len(Config.CHANNELS))
@@ -272,7 +274,6 @@ class RemoteMusicStream():
                 response = connection.recv(Config.PACKET_MAX_LEN)
                 if len(response) == 0:
                     break
-                print(response)
                 connection.send(b"GOODBYE")
             except:
                 pass
@@ -293,17 +294,14 @@ class RemoteMusicStreamer(LocalMusicStreamer):
                 machine_address = tuple(machine_address)
                 s.connect(machine_address)
                 s.sendall(b"HELLO 1")
-                response = s.recv(Config.PACKET_MAX_LEN)
-                print(response)
+                s.recv(Config.PACKET_MAX_LEN)
                 s.sendall(b"HELLO 2")
-                response = s.recv(Config.PACKET_MAX_LEN)
-                print(response)
+                s.recv(Config.PACKET_MAX_LEN)
                 break
             except:
                 pass
 
     def __init__(self, channel_id):
-        self.channel_id = channel_id
         self.downloaded = [False for _ in range(Config.CHANNELS[channel_id][1])]
         self.machine_id = None
         for i in range(len(Config.MACHINES)):
