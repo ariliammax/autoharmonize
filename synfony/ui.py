@@ -55,7 +55,7 @@ class Button():
         else:
             self.button_surf = self.font.render(self.txt, True, (255, 255, 255))
 
-        if not self.ui.get_is_loading():
+        if not self.should_load_on_click or not self.ui.get_is_loading():
             if self.button_rect.collidepoint(mousePos):
                 self.button_surface.fill(self.fill_colors['hover'])
                 if pygame.mouse.get_pressed(num_buttons=3)[0]:
@@ -159,30 +159,28 @@ class Picker:
         self.ui.objects.append(self)
 
     def _decrement(self, **kwargs):
-        if self.value > self.min_value:
-            self.value -= 1
-            self.ui.channel -= 1
-            self.value_surface = self.font.render(str(self.streamers[self.value].get_title()), True, (255, 255, 255))
-            self.value_rect = self.value_surface.get_rect()
-            self.value_rect.center = (
-                self.x + self.width/2,
-                self.y + self.height/2
-            )
-            if self.on_change_function is not None:
-                self.on_change_function(self.value)
+        self.value = (self.value - 1) % (Streamer.get_num_channels() + 1)
+        self.ui.channel = (self.value - 1) % (Streamer.get_num_channels() + 1)
+        self.value_surface = self.font.render(str(self.streamers[self.value].get_title()), True, (255, 255, 255))
+        self.value_rect = self.value_surface.get_rect()
+        self.value_rect.center = (
+            self.x + self.width/2,
+            self.y + self.height/2
+        )
+        if self.on_change_function is not None:
+            self.on_change_function(self.value)
 
     def _increment(self, **kwargs):
-        if self.value < self.max_value:
-            self.value += 1
-            self.ui.channel += 1
-            self.value_surface = self.font.render(str(self.streamers[self.value].get_title()), True, (255, 255, 255))
-            self.value_rect = self.value_surface.get_rect()
-            self.value_rect.center = (
-                self.x + self.width/2,
-                self.y + self.height/2
-            )
-            if self.on_change_function is not None:
-                self.on_change_function(self.value)
+        self.value = (self.value + 1) % (Streamer.get_num_channels() + 1)
+        self.ui.channel = (self.value + 1) % (Streamer.get_num_channels() + 1)
+        self.value_surface = self.font.render(str(self.streamers[self.value].get_title()), True, (255, 255, 255))
+        self.value_rect = self.value_surface.get_rect()
+        self.value_rect.center = (
+            self.x + self.width/2,
+            self.y + self.height/2
+        )
+        if self.on_change_function is not None:
+            self.on_change_function(self.value)
     
     def process(self):
       self.ui.screen.blit(self.value_surface, self.value_rect)
@@ -329,13 +327,13 @@ class SeekSlider():
 
 
 class UI():
-    channel = 0
+    channel = Streamer.get_num_channels()
     event_queue = []
     fps_clock = pygame.time.Clock()
     objects = []
     screen = pygame.display.set_mode((UIConfig.SCREEN_WIDTH, UIConfig.SCREEN_HEIGHT))
     streamers = []
-    is_loading = False
+    is_loading = [False for _ in range(Streamer.get_num_channels())]
 
     def init(self, machine_id):
         self.machine_id = machine_id
@@ -351,7 +349,7 @@ class UI():
         Streamer.init()
 
         Loader(self, UIConfig.SCREEN_WIDTH / 2 - 25, 50, 50, 0.1)
-        Picker(self, 0, 0, UIConfig.SCREEN_WIDTH, 50, 0, 0, Streamer.get_num_channels(), self.streamers, None)
+        Picker(self, 0, 0, UIConfig.SCREEN_WIDTH, 50, self.channel, 0, Streamer.get_num_channels(), self.streamers, None)
         SeekSlider(self, 15, UIConfig.SCREEN_HEIGHT / 2 - 150, 50, 300, self.streamers, (lambda s: s.get_volume()), (lambda s: 1), self.stringify_volume, didChangeVolumeTo)
         Button(self, UIConfig.SCREEN_WIDTH / 2 - 125, UIConfig.SCREEN_HEIGHT / 2 - 50, 250, 100, "Play", "Pause", self.streamers, playButtonTapped)
         SeekSlider(self, 0, UIConfig.SCREEN_HEIGHT - 70, 640, 50, self.streamers, (lambda s: s.get_current_time()), (lambda s: s.get_total_time()), self.stringify_time, didSeekTo)
@@ -384,10 +382,21 @@ class UI():
                 return str(int(volume * 100))
 
     def get_is_loading(self):
-        return self.is_loading or self.streamers[self.channel].is_seeking()
+        if (self.channel == Streamer.get_num_channels()):
+            # ALL Channel
+            return any(self.is_loading) or self.streamers[self.channel].is_seeking()
+        else:
+            return self.is_loading[self.channel] or self.streamers[self.channel].is_seeking()
 
     def start_loading(self):
-        self.is_loading = True
+        if (self.channel == Streamer.get_num_channels()):
+            self.is_loading = [True for _ in range(Streamer.get_num_channels())]
+        else:
+            self.is_loading[self.channel] = True
 
     def stop_loading(self):
-        self.is_loading = False
+        if (self.channel == Streamer.get_num_channels()):
+            self.is_loading = [False for _ in range(Streamer.get_num_channels())]
+        else:
+            self.is_loading[self.channel] = False
+

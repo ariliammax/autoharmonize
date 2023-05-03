@@ -109,12 +109,10 @@ class AllStreamer(Streamer):
         return sum(volumes) / len(volumes)
 
     def is_playing(self):
-        is_playings = [streamer.is_playing() for streamer in self.streamers]
-        return True in is_playings
+        return any([streamer.is_playing() for streamer in self.streamers])
 
     def is_seeking(self):
-        is_seekings = [streamer.is_seeking() for streamer in self.streamers]
-        return True in is_seekings
+        return any([streamer.is_seeking() for streamer in self.streamers])
 
     def schedule_seek(self, chunk, interval, playing):
         assert False
