@@ -7,21 +7,19 @@ class Config:
     # TODO: delete these eventually, and make args
     CHANNELS = [
         # [FILE, CHUNKS, CHUNK_LENGTH]
-        # ["The Turn Down/bass",   100, 1.4929], # CHANNEL 0
-        # ["The Turn Down/drums",  100, 1.4929], # CHANNEL 1
-        # ["The Turn Down/other",  100, 1.4929], # CHANNEL 2
+        ["The Turn Down/bass",   100, 1.4929], # CHANNEL 0
+        ["The Turn Down/drums",  100, 1.4929], # CHANNEL 1
+        ["The Turn Down/other",  100, 1.4929], # CHANNEL 2
         ["The Turn Down/vocals", 100, 1.4929], # CHANNEL 3
     ]
-    MACHINES = [
-        '10.250.140.244:10002',  # MACHINE 0
-        '10.250.78.122:20002',  # MACHINE 1
-        '10.250.148.84:30002'  # MACHINE 2
-    ]
+    MACHINES = ['10.250.140.244:10003', # MACHINE 0
+                '10.250.78.122:20003',  # MACHINE 1
+                '10.250.148.84:30003']  # MACHINE 2
     STREAMS = [
         # [ADDRESS, CHANNELS]
-        ['10.250.140.244:10102', [0]],  # , 1, 2, 3]], # MACHINE 0
-        ['10.250.78.122:20102', [0]],  # , 1, 2, 3]], # MACHINE 1
-        ['10.250.148.84:30102', [0]],  # , 1, 2, 3]], # MACHINE 2
+        ["10.250.140.244:10103", [0, 3]], # MACHINE 0
+        ["10.250.78.122:20103",  [1, 3]], # MACHINE 1
+        ["10.250.148.84:30103",  [2, 3]], # MACHINE 2
     ]
 
     INT_MAX_LEN = 1 << 64
