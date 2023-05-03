@@ -225,10 +225,7 @@ class Machine:
         #      consensus (and is likely to be within tolerable range anyways).
         [event.get_channel_state().set_timestamp(
              event.get_channel_state().get_timestamp() +
-             (max(time.time() - vote.get_sent_timestamp(), 0)
-              if (event.get_channel_state().get_playing() and
-                  event.get_event_code() != EventCode.SEEK.value)
-              else 0)
+             max(time.time() - vote.get_sent_timestamp(), 0)
          )
          for vote in votes
          for event in vote.get_channel_events_states()]
