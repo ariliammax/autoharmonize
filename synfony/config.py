@@ -20,7 +20,6 @@ class Config:
         ['localhost:10105', [0, 1, 2, 3]], # MACHINE 0
         ['localhost:20105', [0, 1, 2, 3]], # MACHINE 1
         ['localhost:30105', [0, 1, 2, 3]], # MACHINE 2
-    ]
 
     INT_MAX_LEN = 1 << 64
     LIST_MAX_LEN = 255
@@ -37,7 +36,6 @@ class Config:
     REMOTE_DELAY_SHORT = 0.5
     REMOTE_DELAY_LONG  = 5.0
     REMOTE_DELAY_LONG_FREQUENCY = 5
-    REMOTE_MAX_QUEUE_LENGTH = 5
 
 
 class UIConfig:

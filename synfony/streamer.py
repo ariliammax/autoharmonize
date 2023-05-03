@@ -4,7 +4,7 @@
 from abc import ABC, abstractmethod
 from socket import AF_INET, SOCK_STREAM, socket
 from synfony.config import Config
-from synfony.models import ChannelState
+from synfony.models import ChannelState, RemoteStreamRequest
 from threading import Thread, Timer
 from time import sleep, time
 
@@ -284,14 +284,14 @@ class RemoteMusicStream():
                 request = connection.recv(Config.PACKET_MAX_LEN)
                 if len(request) == 0:
                     break
-                match request:
-                    case b"REQUEST-SHORT":
-                        sleep(Config.REMOTE_DELAY_SHORT)
-                    case b"REQUEST-LONG":
-                        sleep(Config.REMOTE_DELAY_LONG)
-                    case _:
-                        pass
-                connection.send(b"RESPONSE")
+                request = RemoteStreamRequest.deserialize(request)
+                chunk = request.get_chunk()
+                if (chunk + self.machine_id) % Config.REMOTE_DELAY_LONG_FREQUENCY == 0:
+                    sleep(Config.REMOTE_DELAY_LONG)
+                else:
+                    sleep(Config.REMOTE_DELAY_SHORT)
+                response = b"response"
+                connection.send(response)
             except:
                 pass
 
@@ -315,18 +315,22 @@ class RemoteMusicStreamer(LocalMusicStreamer):
                 pass
         while True:
             try:
-                if False not in self.downloaded and len(self.queue) == 0:
-                    break
-                i = self.downloaded.index(False) if len(self.queue) == 0 else self.queue[0]
-                if (i + self.channel_id + self.machine_id) % Config.REMOTE_DELAY_LONG_FREQUENCY > 0:
-                    s.sendall(b"REQUEST-SHORT")
+                chunk = self.prioritized
+                if chunk is None:
+                    if False not in self.downloaded:
+                        break
+                    chunk = self.downloaded.index(False)
                 else:
-                    s.sendall(b"REQUEST-LONG")
+                    print("NEW", self.prioritized)
+                    self.prioritized = None
+                request = RemoteStreamRequest(chunk=chunk)
+                request = request.serialize()
+                s.sendall(request)
                 response = s.recv(Config.PACKET_MAX_LEN)
                 if len(response) == 0:
                     break
-                self.downloaded[i] = True
-                self.queue = [j for j in self.queue if not self.downloaded[j]]
+                self.downloaded[chunk] = True
+                print("DONE", chunk)
             except:
                 pass
 
@@ -334,7 +338,7 @@ class RemoteMusicStreamer(LocalMusicStreamer):
         self.downloaded = [False for _ in range(Config.CHANNELS[channel_id][1] + 1)]
         self.downloaded[0] = True
         self.machine_id = None
-        self.queue = []
+        self.prioritized = None
         for i in range(len(Config.MACHINES)):
             if channel_id in Config.STREAMS[i][1]:
                 self.machine_id = i
@@ -343,7 +347,14 @@ class RemoteMusicStreamer(LocalMusicStreamer):
 
     def get_chunk(self, chunk):
         if not self.downloaded[chunk]:
-            self.queue.insert(0, chunk + 1)
-            self.queue = self.queue[:Config.REMOTE_MAX_QUEUE_LENGTH]
             return None
         return super().get_chunk(chunk)
+
+    def schedule_seek(self, chunk, interval, playing):
+        chunk += 1
+        if chunk > Config.CHANNELS[self.channel_id][1]:
+            chunk = 1
+        if not self.downloaded[chunk]:
+            self.prioritized = chunk
+        chunk -= 1
+        return super().schedule_seek(chunk, interval, playing)
