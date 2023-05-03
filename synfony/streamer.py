@@ -205,7 +205,7 @@ class LocalMusicStreamer(Streamer):
         self.current_chunk_index = chunk
         self.current_chunk_timestamp = 0.0
         self.playing = False
-        self.timer = Timer(interval, self.seek, [
+        self.timer = Timer(interval - Config.PYGAME_DELAY, self.seek, [
             chunk,
             playing,
         ])
