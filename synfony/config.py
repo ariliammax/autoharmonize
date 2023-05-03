@@ -7,19 +7,22 @@ class Config:
     # TODO: delete these eventually, and make args
     CHANNELS = [
         # [FILE, CHUNKS, CHUNK_LENGTH]
-        ["The Turn Down/bass",   100, 1.4929], # CHANNEL 0
-        ["The Turn Down/drums",  100, 1.4929], # CHANNEL 1
-        ["The Turn Down/other",  100, 1.4929], # CHANNEL 2
+        # ["The Turn Down/bass",   100, 1.4929], # CHANNEL 0
+        # ["The Turn Down/drums",  100, 1.4929], # CHANNEL 1
+        # ["The Turn Down/other",  100, 1.4929], # CHANNEL 2
         ["The Turn Down/vocals", 100, 1.4929], # CHANNEL 3
     ]
-    MACHINES = ['localhost:10005', # MACHINE 0
-                'localhost:20005', # MACHINE 1
-                'localhost:30005'] # MACHINE 2
+    MACHINES = [
+        '10.250.140.244:10001',  # MACHINE 0
+        '10.250.78.122:20001',  # MACHINE 1
+        '10.250.148.84:30001'  # MACHINE 2
+    ]
     STREAMS = [
         # [ADDRESS, CHANNELS]
-        ['localhost:10105', [0, 1, 2, 3]], # MACHINE 0
-        ['localhost:20105', [0, 1, 2, 3]], # MACHINE 1
-        ['localhost:30105', [0, 1, 2, 3]], # MACHINE 2
+        ['10.250.140.244:10101', [0]],  # , 1, 2, 3]], # MACHINE 0
+        ['10.250.78.122:20101', [0]],  # , 1, 2, 3]], # MACHINE 1
+        ['10.250.148.84:30101', [0]],  # , 1, 2, 3]], # MACHINE 2
+    ]
 
     INT_MAX_LEN = 1 << 64
     LIST_MAX_LEN = 255
@@ -27,9 +30,9 @@ class Config:
     STR_MAX_LEN = 280
 
     HANDSHAKE_ENABLED = True
-    HANDSHAKE_TIMEOUT = 0.3
-    HANDSHAKE_INTERVAL = 1.1
-    HEARTBEAT_TIMEOUT = 1
+    HANDSHAKE_TIMEOUT = 0.05
+    HANDSHAKE_INTERVAL = 0.25
+    HEARTBEAT_TIMEOUT = 0.2
     TIMEOUT = 1
     TOLERABLE_DELAY = 0.1
 
