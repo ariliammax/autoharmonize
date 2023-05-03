@@ -315,14 +315,13 @@ class RemoteMusicStreamer(LocalMusicStreamer):
                 pass
         while True:
             try:
+                if False not in self.prioritized:
+                    break
                 chunk = self.prioritized
-                if chunk is None:
-                    if False not in self.downloaded:
-                        break
-                    chunk = self.downloaded.index(False)
-                else:
-                    print("NEW", self.prioritized)
-                    self.prioritized = None
+                while self.downloaded[chunk]:
+                    chunk += 1
+                    if chunk > Config.CHANNELS[self.channel_id][1]:
+                        chunk = 1
                 request = RemoteStreamRequest(chunk=chunk)
                 request = request.serialize()
                 s.sendall(request)
@@ -338,7 +337,7 @@ class RemoteMusicStreamer(LocalMusicStreamer):
         self.downloaded = [False for _ in range(Config.CHANNELS[channel_id][1] + 1)]
         self.downloaded[0] = True
         self.machine_id = None
-        self.prioritized = None
+        self.prioritized = 1
         for i in range(len(Config.MACHINES)):
             if channel_id in Config.STREAMS[i][1]:
                 self.machine_id = i
