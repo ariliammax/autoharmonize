@@ -46,7 +46,7 @@ class BaseEvent(Model.model_with_fields(event_code=int)):
     def deserialize(cls, data: bytes):
         """Deserialize a `BaseEvent` based on its `event_code`.
         """
-        event_code = EventCode(BaseEvent.peek_event_code(data))
+        event_code = BaseEvent.peek_event_code(data)
         match event_code:
             case EventCode.NONE:
                 return NoneEvent.deserialize(data)
@@ -127,6 +127,8 @@ class ChannelState(Model.model_with_fields(
 
                 3 - conflicting seeks go to the furthest along
         """
+        print('choice', channel_events_states)
+
         if len(channel_events_states) == 0:
             return DEFAULT_CHANNEL_STATE
 
@@ -180,15 +182,23 @@ class ChannelState(Model.model_with_fields(
                 ordered_events[vol_idxes[0]]
                     .get_channel_state().get_volume())
         return ChannelState(
-            idx=ordered_events[seek_idxes[0]]
-                .get_channel_state().get_idx(),
-            last_timestamp=ordered_events[seek_idxes[0]]
-                .get_channel_state().get_last_timestamp(),
-            timestamp=ordered_events[seek_idxes[0]]
-                .get_channel_state().get_timestamp(),
-            playing=(False if any_pause else (any_play or any_playing)),
-            volume=ordered_events[vol_idxes[0]]
-                .get_channel_state().get_volume()
+            idx=
+                ordered_events[seek_idxes[0]].get_channel_state()
+                .get_idx(),
+            last_timestamp=
+                ordered_events[seek_idxes[0]].get_channel_state()
+                .get_last_timestamp()
+                if not any_seek or any_playing else
+                ordered_events[seek_idxes[0]].get_channel_state()
+                .get_timestamp(),
+            timestamp=
+                ordered_events[seek_idxes[0]].get_channel_state()
+                .get_timestamp(),
+            playing=
+                False if any_pause else (any_play or any_playing),
+            volume=
+                ordered_events[vol_idxes[0]].get_channel_state()
+                .get_volume()
         )
 
 DEFAULT_CHANNEL_STATE = ChannelState(

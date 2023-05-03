@@ -61,3 +61,5 @@ members), so we are opting for the more standard "handshake" consensus.
 #### Debugging notes
 
 - Fun pygame `malloc` error when seeking to a new chunk (!?)
+
+- `float` serialization is quite inaccurate at large values!

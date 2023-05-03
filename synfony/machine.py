@@ -144,11 +144,20 @@ class Machine:
              if len(latest_events[c_idx]) > 0]
         [event.set_channel_state(
             ChannelState(
-                idx=c_idx,
-                last_timestamp=ui_manager.streamers[c_idx].get_last_time(),
-                timestamp=ui_manager.streamers[c_idx].get_current_time(),
-                playing=ui_manager.streamers[c_idx].is_playing(),
-                volume=ui_manager.streamers[c_idx].get_volume()
+                idx=
+                    c_idx,
+                last_timestamp=
+                    ui_manager.streamers[c_idx].get_last_time(),
+                timestamp=
+                    ui_manager.streamers[c_idx].get_current_time()
+                    if event.get_event_code() != EventCode.SEEK.value else
+                    event.get_channel_state().get_timestamp(),
+                playing=
+                    ui_manager.streamers[c_idx].is_playing(),
+                volume=
+                    ui_manager.streamers[c_idx].get_volume()
+                    if event.get_event_code() != EventCode.VOLUME.value else
+                    event.get_channel_state().get_volume(),
             )
          ) for c_idx, event in enumerate(channel_events_states)]
 
@@ -161,8 +170,10 @@ class Machine:
             machine_message_queues[my_idx].append(request)
 
         # don't send if can't deserialize??
+        print('out req', my_idx, request)
         request_data = request.serialize()
         out = HeartbeatRequest.deserialize(request_data)
+        print('des req', my_idx, request)
 
         # 1 - send to all
         def impl_send_state(s: socket, i: int, request_data: bytes):
@@ -174,6 +185,7 @@ class Machine:
                     print('sent', my_idx, '->', i)
                     break
                 except:
+                    break  # TODO
                     pass
             with cls._lock:
                 machine_addresses[i].set_status(status)
@@ -211,6 +223,8 @@ class Machine:
 
             with cls._lock:
                 machine_message_queues[i].clear()
+
+        print('votes', votes)
 
         # 3 - consensus + `ui_manager.streamer.sync(...)`; and
         #     increment the `._event._timestamp` by

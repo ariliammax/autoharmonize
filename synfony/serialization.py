@@ -16,13 +16,14 @@ import struct
 # number of `char`s.
 # anyways, this isn't exactly that, but a safe over-approximation.
 
-# the number of bits taken up in serializing an `int` using `chr`s
-FLOAT_LEN_BYTES = 4
-# the number of bits taken up in serializing an `int` using `chr`s
+
+# the number of bytes taken up in serializing an `int` using `chr`s
+FLOAT_LEN_BYTES = 8
+# the number of bytes taken up in serializing an `int` using `chr`s
 INT_LEN_BYTES = int(log(Config.INT_MAX_LEN) / 8) + 1
-# the number of bits taken up in serializing an `int` encoding a `list`'s `len`
+# the number of bytes taken up in serializing an `int` encoding a `list`'s `len`
 LIST_LEN_BYTES = int(log(Config.LIST_MAX_LEN) / 8) + 1
-# the number of bits taken up in serializing an `int` encoding a `str`'s `len`
+# the number of bytes taken up in serializing an `int` encoding a `str`'s `len`
 STR_LEN_BYTES = int(log(Config.STR_MAX_LEN) / 8) + 1
 
 
@@ -48,13 +49,20 @@ class SerializationUtils:
     def deserialize_float(data: bytes) -> float:
         """Deserialize `bytes` into an `float`.
         """
-        return struct.unpack('f', data[:min(FLOAT_LEN_BYTES, len(data))])[0]
+        # TODO: less hack
+        # try:
+        #     return float(SerializationUtils.deserialize_str(data))
+        # except:
+        #     return None
+        return struct.unpack('d', data[:FLOAT_LEN_BYTES])[0]
 
     @staticmethod
     def serialize_float(val: float) -> bytes:
         """Serialize an `float` into a `bytes`.
         """
-        return struct.pack('f', float(val))
+        # TODO: less hack
+        # return SerializationUtils.serialize_str(str(val))
+        return struct.pack('d', val)
 
     @staticmethod
     def deserialize_int(data: bytes, length: int = INT_LEN_BYTES) -> int:
