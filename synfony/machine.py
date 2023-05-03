@@ -129,7 +129,8 @@ class Machine:
                 timestamp=ui_manager
                     .streamers[event.get_channel_state().get_idx()]
                     .get_current_time()
-                    if event.get_event_code() != EventCode.SEEK.value else
+                    if (event.get_event_code() != EventCode.SEEK.value and
+                        event.get_event_code() != EventCode.PAUSE.value) else
                     event.get_channel_state().get_timestamp(),
                 playing=ui_manager
                     .streamers[event.get_channel_state().get_idx()]

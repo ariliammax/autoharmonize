@@ -175,7 +175,7 @@ class ChannelState(Model.model_with_fields(
             last_timestamp=
                 ordered_events[seek_idxes[0]].get_channel_state()
                 .get_last_timestamp()
-                if (not any_seek or any_playing) and not any_pause else
+                if any_seek or not any_playing or any_pause else
                 ordered_events[seek_idxes[0]].get_channel_state()
                 .get_timestamp(),
             timestamp=
