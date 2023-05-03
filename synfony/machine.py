@@ -4,16 +4,11 @@
 from socket import AF_INET, SHUT_RDWR, SOCK_STREAM, socket
 from synfony.config import Config
 from synfony.enums import EventCode, OperationCode
-from synfony.models import BaseEvent, \
-                           NoneEvent, \
-                           PauseEvent, \
-                           PlayEvent, \
-                           SeekEvent
 from synfony.models import BaseRequest, HeartbeatRequest, IdentityRequest
 from synfony.models import ChannelState,  MachineAddress
 from synfony.ui import UI
 from threading import Thread
-from typing import Callable, List, Tuple
+from typing import Callable, List
 
 
 import threading
@@ -64,9 +59,8 @@ class Machine:
                           connection,
                           machine_message_queues]
                 ).start()
-            except Exception as e:
+            except Exception:
                 pass
-
 
     @classmethod
     def listen_client(cls, idx, connection, machine_message_queues):
@@ -82,9 +76,8 @@ class Machine:
                 request = HeartbeatRequest.deserialize(request_data)
                 with cls._lock:
                     machine_message_queues[idx].append(request)
-            except:
+            except Exception:
                 pass
-
 
     @classmethod
     def metronome(cls,
@@ -115,12 +108,6 @@ class Machine:
         """
         start_t = time.time()
 
-        up_machine_addresses=[machine
-                              for i, machine in
-                              enumerate(machine_addresses)
-                              if (machine is not None and
-                                  machine.get_status())]
-
         latest_events = \
             [[event for event in ui_manager.event_queue[::-1]
               if event.get_channel_state().get_idx() == c_idx]
@@ -134,24 +121,20 @@ class Machine:
              if len(latest_events[c_idx]) > 0]
         [event.set_channel_state(
             ChannelState(
-                idx=
-                    event.get_channel_state().get_idx(),
-                last_timestamp=
-                    ui_manager
+                idx=event
+                    .get_channel_state().get_idx(),
+                last_timestamp=ui_manager
                     .streamers[event.get_channel_state().get_idx()]
                     .get_last_time(),
-                timestamp=
-                    ui_manager
+                timestamp=ui_manager
                     .streamers[event.get_channel_state().get_idx()]
                     .get_current_time()
                     if event.get_event_code() != EventCode.SEEK.value else
                     event.get_channel_state().get_timestamp(),
-                playing=
-                    ui_manager
+                playing=ui_manager
                     .streamers[event.get_channel_state().get_idx()]
                     .is_playing(),
-                volume=
-                    ui_manager
+                volume=ui_manager
                     .streamers[event.get_channel_state().get_idx()]
                     .get_volume()
                     if event.get_event_code() != EventCode.VOLUME.value else
@@ -177,7 +160,7 @@ class Machine:
                     s.sendall(request_data)
                     status = True
                     break
-                except:
+                except Exception:
                     pass
             with cls._lock:
                 machine_addresses[i].set_status(status)
@@ -247,19 +230,10 @@ class Machine:
          if len(events) > 0]
         ui_manager.stop_loading()
 
-        # 4 - schedule next
+        # 4 - wait for next
         time.sleep(
             max(Config.HANDSHAKE_INTERVAL - (time.time() - start_t), 0.01)
         )
-        return cls.metronome(
-            my_idx,
-            sockets=sockets,
-            machine_addresses=machine_addresses,
-            ui_manager=ui_manager,
-            machine_message_queues=machine_message_queues,
-            choice_func=choice_func
-        )
-
 
     @classmethod
     def handler(cls, e, s: socket):
@@ -267,13 +241,12 @@ class Machine:
         """
         try:
             s.shutdown(SHUT_RDWR)
-        except:
+        except Exception:
             pass
         finally:
             s.close()
         if e is not None:
             raise e
-
 
     @classmethod
     def main(cls, idx: int, machines: List[str]):
@@ -302,6 +275,7 @@ class Machine:
                 s.listen()
 
                 sockets = [None for _ in machine_addresses]
+
                 def connect_to_socket(idx, other_machine_address):
                     if other_machine_address.get_idx() == idx:
                         with cls._lock:
@@ -326,7 +300,7 @@ class Machine:
                                     sockets[other_machine_address
                                             .get_idx()] = other_socket
                                 break
-                            except Exception as e:
+                            except Exception:
                                 pass
                 connect_threads = [
                     threading.Thread(
@@ -343,15 +317,15 @@ class Machine:
 
                 time.sleep(Config.TIMEOUT)
 
-                # if this returns, then we'll close the socket
-                cls.metronome(
-                    my_idx=idx,
-                    sockets=sockets,
-                    machine_addresses=machine_addresses,
-                    ui_manager=ui_manager,
-                    machine_message_queues=machine_message_queues,
-                    choice_func=ChannelState.choice_func
-                )
+                while True:
+                    cls.metronome(
+                        my_idx=idx,
+                        sockets=sockets,
+                        machine_addresses=machine_addresses,
+                        ui_manager=ui_manager,
+                        machine_message_queues=machine_message_queues,
+                        choice_func=ChannelState.choice_func
+                    )
             except Exception as e:
                 cls.handler(e=e, s=s)
             finally:
