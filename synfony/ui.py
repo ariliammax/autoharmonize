@@ -160,7 +160,8 @@ class Picker:
 
     def _decrement(self, **kwargs):
         self.value = (self.value - 1) % (Streamer.get_num_channels() + 1)
-        self.ui.channel = (self.value - 1) % (Streamer.get_num_channels() + 1)
+        self.ui.channel = (self.ui.channel - 1) % (Streamer.get_num_channels() + 1)
+
         self.value_surface = self.font.render(str(self.streamers[self.value].get_title()), True, (255, 255, 255))
         self.value_rect = self.value_surface.get_rect()
         self.value_rect.center = (
@@ -172,7 +173,8 @@ class Picker:
 
     def _increment(self, **kwargs):
         self.value = (self.value + 1) % (Streamer.get_num_channels() + 1)
-        self.ui.channel = (self.value + 1) % (Streamer.get_num_channels() + 1)
+        self.ui.channel = (self.ui.channel + 1) % (Streamer.get_num_channels() + 1)
+
         self.value_surface = self.font.render(str(self.streamers[self.value].get_title()), True, (255, 255, 255))
         self.value_rect = self.value_surface.get_rect()
         self.value_rect.center = (
