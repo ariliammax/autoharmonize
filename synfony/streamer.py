@@ -231,7 +231,11 @@ class LocalMusicStreamer(Streamer):
             channel.set_endevent(pygame.USEREVENT + self.channel_id)
 
     def sync(self, state: ChannelState):
-        last_timestamp = state.get_last_timestamp()
+        last_timestamp = (
+            state.get_last_timestamp()
+            if state.get_playing() else
+            self.get_current_time()
+        )
         playing = state.get_playing()
         timestamp = state.get_timestamp()
         volume = state.get_volume()
