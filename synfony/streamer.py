@@ -315,7 +315,7 @@ class RemoteMusicStreamer(LocalMusicStreamer):
                 pass
         while True:
             try:
-                if False not in self.prioritized:
+                if False not in self.downloaded:
                     break
                 chunk = self.prioritized
                 while self.downloaded[chunk]:
@@ -329,7 +329,6 @@ class RemoteMusicStreamer(LocalMusicStreamer):
                 if len(response) == 0:
                     break
                 self.downloaded[chunk] = True
-                print("DONE", chunk)
             except:
                 pass
 
