@@ -135,21 +135,29 @@ class Machine:
         [event.set_channel_state(
             ChannelState(
                 idx=
-                    c_idx,
+                    event.get_channel_state().get_idx(),
                 last_timestamp=
-                    ui_manager.streamers[c_idx].get_last_time(),
+                    ui_manager
+                    .streamers[event.get_channel_state().get_idx()]
+                    .get_last_time(),
                 timestamp=
-                    ui_manager.streamers[c_idx].get_current_time()
+                    ui_manager
+                    .streamers[event.get_channel_state().get_idx()]
+                    .get_current_time()
                     if event.get_event_code() != EventCode.SEEK.value else
                     event.get_channel_state().get_timestamp(),
                 playing=
-                    ui_manager.streamers[c_idx].is_playing(),
+                    ui_manager
+                    .streamers[event.get_channel_state().get_idx()]
+                    .is_playing(),
                 volume=
-                    ui_manager.streamers[c_idx].get_volume()
+                    ui_manager
+                    .streamers[event.get_channel_state().get_idx()]
+                    .get_volume()
                     if event.get_event_code() != EventCode.VOLUME.value else
                     event.get_channel_state().get_volume(),
             )
-         ) for c_idx, event in enumerate(channel_events_states)]
+         ) for event in channel_events_states]
 
         request = HeartbeatRequest(
             channel_events_states=channel_events_states,
@@ -232,11 +240,11 @@ class Machine:
              if event.get_channel_state().get_idx() == c_idx]
             for c_idx in all_channel_idxes
         ]
-        [ui_manager.streamers[c_idx].sync(
+        [ui_manager.streamers[events[0].get_channel_state().get_idx()].sync(
             choice_func(events)
          )
-         for c_idx, events in enumerate(all_channel_idx_events)
-         if c_idx != len(ui_manager.streamers) - 1 or len(events) == 0]
+         for events in all_channel_idx_events
+         if len(events) > 0]
         ui_manager.stop_loading()
 
         # 4 - schedule next
