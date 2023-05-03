@@ -6,7 +6,7 @@ from socket import AF_INET, SOCK_STREAM, socket
 from synfony.config import Config
 from synfony.models import ChannelState
 from threading import Thread, Timer
-from time import time
+from time import sleep, time
 
 import pygame
 
@@ -53,6 +53,10 @@ class Streamer(ABC):
 
     @abstractmethod
     def is_playing(self):
+        pass
+
+    @abstractmethod
+    def is_seeking(self):
         pass
 
     @abstractmethod
@@ -105,8 +109,10 @@ class AllStreamer(Streamer):
         return sum(volumes) / len(volumes)
 
     def is_playing(self):
-        is_playings = [streamer.is_playing() for streamer in self.streamers]
-        return True in is_playings
+        return any([streamer.is_playing() for streamer in self.streamers])
+
+    def is_seeking(self):
+        return any([streamer.is_seeking() for streamer in self.streamers])
 
     def schedule_seek(self, chunk, interval, playing):
         assert False
@@ -128,9 +134,10 @@ class LocalMusicStreamer(Streamer):
         self.last_timestamp = 0.0
         self.playing = False
         self.timer = None
-        self.volume = 50
+        self.volume = 0.5
         channel = pygame.mixer.Channel(channel_id)
         channel.set_endevent(pygame.USEREVENT + channel_id)
+        channel.set_volume(self.volume)
         chunk = 1
         sound = self.get_chunk(chunk)
         if sound is None:
@@ -187,6 +194,9 @@ class LocalMusicStreamer(Streamer):
 
     def is_playing(self):
         return self.playing
+
+    def is_seeking(self):
+        return self.timer is not None
 
     def schedule_seek(self, chunk, interval, playing):
         chunk += 1
@@ -271,10 +281,17 @@ class RemoteMusicStream():
     def recv(self, connection):
         while True:
             try:
-                response = connection.recv(Config.PACKET_MAX_LEN)
-                if len(response) == 0:
+                request = connection.recv(Config.PACKET_MAX_LEN)
+                if len(request) == 0:
                     break
-                connection.send(b"GOODBYE")
+                match request:
+                    case b"REQUEST-SHORT":
+                        sleep(Config.REMOTE_DELAY_SHORT)
+                    case b"REQUEST-LONG":
+                        sleep(Config.REMOTE_DELAY_LONG)
+                    case _:
+                        pass
+                connection.send(b"RESPONSE")
             except:
                 pass
 
@@ -293,17 +310,31 @@ class RemoteMusicStreamer(LocalMusicStreamer):
                 machine_address[1] = int(machine_address[1])
                 machine_address = tuple(machine_address)
                 s.connect(machine_address)
-                s.sendall(b"HELLO 1")
-                s.recv(Config.PACKET_MAX_LEN)
-                s.sendall(b"HELLO 2")
-                s.recv(Config.PACKET_MAX_LEN)
                 break
+            except:
+                pass
+        while True:
+            try:
+                if False not in self.downloaded and len(self.queue) == 0:
+                    break
+                i = self.downloaded.index(False) if len(self.queue) == 0 else self.queue[0]
+                if (i + self.channel_id + self.machine_id) % Config.REMOTE_DELAY_LONG_FREQUENCY > 0:
+                    s.sendall(b"REQUEST-SHORT")
+                else:
+                    s.sendall(b"REQUEST-LONG")
+                response = s.recv(Config.PACKET_MAX_LEN)
+                if len(response) == 0:
+                    break
+                self.downloaded[i] = True
+                self.queue = [j for j in self.queue if not self.downloaded[j]]
             except:
                 pass
 
     def __init__(self, channel_id):
-        self.downloaded = [False for _ in range(Config.CHANNELS[channel_id][1])]
+        self.downloaded = [False for _ in range(Config.CHANNELS[channel_id][1] + 1)]
+        self.downloaded[0] = True
         self.machine_id = None
+        self.queue = []
         for i in range(len(Config.MACHINES)):
             if channel_id in Config.STREAMS[i][1]:
                 self.machine_id = i
@@ -312,5 +343,7 @@ class RemoteMusicStreamer(LocalMusicStreamer):
 
     def get_chunk(self, chunk):
         if not self.downloaded[chunk]:
+            self.queue.insert(0, chunk + 1)
+            self.queue = self.queue[:Config.REMOTE_MAX_QUEUE_LENGTH]
             return None
         return super().get_chunk(chunk)
