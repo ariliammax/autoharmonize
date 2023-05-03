@@ -340,6 +340,7 @@ class UI():
     def init(self, machine_id):
         self.machine_id = machine_id
         pygame.init()
+        pygame.display.set_caption('AUTOHARMONIZER (' + str(machine_id) + ')')
 
         RemoteMusicStream(machine_id)
         for i in range(Streamer.get_num_channels()):
