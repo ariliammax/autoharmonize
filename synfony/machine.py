@@ -58,7 +58,6 @@ class Machine:
                         machine_address
 
                 # 3 - `listen_client` start
-                print('accepted', s.getsockname())
                 threading.Thread(
                     target=cls.listen_client,
                     args=[machine_address.get_idx(),
@@ -83,11 +82,6 @@ class Machine:
                 request = HeartbeatRequest.deserialize(request_data)
                 with cls._lock:
                     machine_message_queues[idx].append(request)
-                print('good msg from', idx, ' | ',
-                      EventCode(request.get_channel_events_states()[0]
-                                .get_event_code()))
-                print('good msg from', idx, ' is\n\t',
-                      request.get_channel_events_states())
             except:
                 pass
 
@@ -120,7 +114,6 @@ class Machine:
             than `Config.HEARTBEAT_TIMEOUT`.
         """
         start_t = time.time()
-        print('start hb', my_idx)
 
         up_machine_addresses=[machine
                               for i, machine in
@@ -128,14 +121,11 @@ class Machine:
                               if (machine is not None and
                                   machine.get_status())]
 
-        print('hb', my_idx, '| len(up_machines)=', len(up_machine_addresses))
-
         latest_events = \
             [[event for event in ui_manager.event_queue[::-1]
               if event.get_channel_state().get_idx() == c_idx]
              for c_idx in range(len(ui_manager.streamers))]
-        if len(ui_manager.event_queue) > 0:
-            print('has events!', my_idx)
+
         # TODO: lock in UI
         ui_manager.event_queue.clear()
         channel_events_states = \
@@ -169,11 +159,7 @@ class Machine:
         with cls._lock:
             machine_message_queues[my_idx].append(request)
 
-        # don't send if can't deserialize??
-        print('out req', my_idx, request)
         request_data = request.serialize()
-        out = HeartbeatRequest.deserialize(request_data)
-        print('des req', my_idx, request)
 
         # 1 - send to all
         def impl_send_state(s: socket, i: int, request_data: bytes):
@@ -182,10 +168,8 @@ class Machine:
                 try:
                     s.sendall(request_data)
                     status = True
-                    print('sent', my_idx, '->', i)
                     break
                 except:
-                    break  # TODO
                     pass
             with cls._lock:
                 machine_addresses[i].set_status(status)
@@ -223,8 +207,6 @@ class Machine:
 
             with cls._lock:
                 machine_message_queues[i].clear()
-
-        print('votes', votes)
 
         # 3 - consensus + `ui_manager.streamer.sync(...)`; and
         #     increment the `._event._timestamp` by
@@ -310,8 +292,6 @@ class Machine:
                 )
                 s.settimeout(None)  # infinite, so blocking `recv`s
                 s.listen()
-
-                print('listen', idx)
 
                 sockets = [None for _ in machine_addresses]
                 def connect_to_socket(idx, other_machine_address):

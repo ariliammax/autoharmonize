@@ -127,8 +127,6 @@ class ChannelState(Model.model_with_fields(
 
                 3 - conflicting seeks go to the furthest along
         """
-        print('choice', channel_events_states)
-
         if len(channel_events_states) == 0:
             return DEFAULT_CHANNEL_STATE
 
@@ -170,17 +168,6 @@ class ChannelState(Model.model_with_fields(
         if not any_vol:
             vol_idxes = [0]
 
-        if ordered_events[seek_idxes[0]].get_channel_state().get_idx() == 0:
-            print('channelstate',
-                ordered_events[seek_idxes[0]]
-                    .get_channel_state().get_idx(),
-                ordered_events[seek_idxes[0]]
-                    .get_channel_state().get_last_timestamp(),
-                ordered_events[seek_idxes[0]]
-                    .get_channel_state().get_timestamp(),
-                (False if any_pause else (any_play or any_playing)),
-                ordered_events[vol_idxes[0]]
-                    .get_channel_state().get_volume())
         return ChannelState(
             idx=
                 ordered_events[seek_idxes[0]].get_channel_state()
