@@ -328,3 +328,6 @@ IdentityRequest = BaseRequest.add_fields_with_operation_code(
     machine_address=MachineAddress,
     operation_code=OperationCode.IDENTITY
 )
+
+
+RemoteStreamRequest = Model.add_fields(chunk=int)
