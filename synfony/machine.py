@@ -4,7 +4,7 @@
 from synfony.config import Config
 from synfony.enums import EventCode, OperationCode
 from synfony.models import BaseRequest, HeartbeatRequest, IdentityRequest
-from synfony.models import ChannelState,  MachineAddress
+from synfony.models import ChannelState, MachineAddress, NoneEvent
 from synfony.sockets import TCPSockets
 from synfony.ui import UI
 from threading import Thread
@@ -20,6 +20,58 @@ class Machine:
     _lock = threading.Lock()
 
     sockets = TCPSockets
+
+    @classmethod
+    def startup(cls, idx, machine_addresses, machine_message_queues):
+        machine_address = machine_addresses[idx]
+        s = cls.sockets.start_socket(
+            machine_address=machine_address,
+            timeout=None,
+            bind=True
+        )
+
+        sockets = [None for _ in machine_addresses]
+
+        def connect_to_socket(idx, other_machine_address):
+            if other_machine_address.get_idx() == idx:
+                with cls._lock:
+                    sockets[idx] = s
+            else:
+                while True:
+                    try:
+                        other_socket = cls.sockets.start_socket(
+                            machine_address=other_machine_address,
+                            timeout=Config.HANDSHAKE_TIMEOUT,
+                            connect=True
+                        )
+                        cls.sockets.sendall(
+                            other_socket,
+                            IdentityRequest(
+                                machine_address=machine_address
+                            ).serialize()
+                        )
+                        with cls._lock:
+                            sockets[other_machine_address
+                                    .get_idx()] = other_socket
+                        break
+                    except Exception:
+                        pass
+        connect_threads = [
+            threading.Thread(
+                target=connect_to_socket,
+                args=[idx, other_machine_address]
+            )
+            for other_machine_address in machine_addresses]
+        [thread.start() for thread in connect_threads]
+        threading.Thread(
+            target=cls.accept_clients,
+            args=(idx, machine_addresses, s, machine_message_queues)
+        ).start()
+        [thread.join() for thread in connect_threads]
+
+        time.sleep(Config.TIMEOUT)
+
+        return sockets
 
     @classmethod
     def accept_clients(cls,
@@ -119,6 +171,7 @@ class Machine:
         ui_manager.event_queue.clear()
         channel_events_states = \
             [latest_events[c_idx][0]
+             # NoneEvent(channel_state=ChannelState(idx=c_idx))
              for c_idx in range(len(ui_manager.streamers))
              if len(latest_events[c_idx]) > 0]
         [event.set_channel_state(
@@ -268,59 +321,19 @@ class Machine:
                                  status=(i == idx))
                              for i, machine in enumerate(machines)]
         machine_message_queues = [[] for _ in machines]
+        sockets = []
         ui_manager = UI()
 
         def networking(idx: int,
                        machine_addresses: List[MachineAddress],
+                       sockets,
                        ui_manager: UI):
             try:
-                machine_address = machine_addresses[idx]
-                s = cls.sockets.start_socket(
-                    machine_address=machine_address,
-                    timeout=None,
-                    bind=True
+                sockets = cls.startup(
+                    idx=idx,
+                    machine_addresses=machine_addresses,
+                    machine_message_queues=machine_message_queues
                 )
-
-                sockets = [None for _ in machine_addresses]
-
-                def connect_to_socket(idx, other_machine_address):
-                    if other_machine_address.get_idx() == idx:
-                        with cls._lock:
-                            sockets[idx] = s
-                    else:
-                        while True:
-                            try:
-                                other_socket = cls.sockets.start_socket(
-                                    machine_address=other_machine_address,
-                                    timeout=Config.HANDSHAKE_TIMEOUT,
-                                    connect=True
-                                )
-                                cls.sockets.sendall(
-                                    other_socket,
-                                    IdentityRequest(
-                                        machine_address=machine_address
-                                    ).serialize()
-                                )
-                                with cls._lock:
-                                    sockets[other_machine_address
-                                            .get_idx()] = other_socket
-                                break
-                            except Exception:
-                                pass
-                connect_threads = [
-                    threading.Thread(
-                        target=connect_to_socket,
-                        args=[idx, other_machine_address]
-                    )
-                    for other_machine_address in machine_addresses]
-                [thread.start() for thread in connect_threads]
-                threading.Thread(
-                    target=cls.accept_clients,
-                    args=(idx, machine_addresses, s, machine_message_queues)
-                ).start()
-                [thread.join() for thread in connect_threads]
-
-                time.sleep(Config.TIMEOUT)
 
                 while True:
                     cls.metronome(
@@ -332,11 +345,11 @@ class Machine:
                         choice_func=ChannelState.choice_func
                     )
             except Exception as e:
-                cls.handler(e=e, s=s)
+                cls.handler(e=e, s=sockets[idx])
             finally:
-                cls.handler(e=None, s=s)
+                cls.handler(e=None, s=sockets[idx])
 
         if Config.HANDSHAKE_ENABLED:
             Thread(target=networking,
-                   args=[idx, machine_addresses, ui_manager]).start()
+                   args=[idx, machine_addresses, sockets, ui_manager]).start()
         ui_manager.init(idx)
