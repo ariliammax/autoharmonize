@@ -7,19 +7,22 @@ class Config:
     # TODO: delete these eventually, and make args
     CHANNELS = [
         # [FILE, CHUNKS, CHUNK_LENGTH]
-        ["The Turn Down/bass",   100, 1.4929], # CHANNEL 0
-        ["The Turn Down/drums",  100, 1.4929], # CHANNEL 1
-        ["The Turn Down/other",  100, 1.4929], # CHANNEL 2
-        ["The Turn Down/vocals", 100, 1.4929], # CHANNEL 3
+        ["The Turn Down/bass",   100, 1.4929],  # CHANNEL 0
+        ["The Turn Down/drums",  100, 1.4929],  # CHANNEL 1
+        ["The Turn Down/other",  100, 1.4929],  # CHANNEL 2
+        ["The Turn Down/vocals", 100, 1.4929],  # CHANNEL 3
     ]
-    MACHINES = ['10.250.140.244:10000', # MACHINE 0
-                '10.250.78.122:20000', # MACHINE 1
-                '10.250.148.84:30000'] # MACHINE 2
+
+    MACHINES = [
+        '10.250.140.244:10000',            # MACHINE 0
+        '10.250.78.122:20000',             # MACHINE 1
+        '10.250.148.84:30000']             # MACHINE 2
+
+    # [ADDRESS, CHANNELS]
     STREAMS = [
-        # [ADDRESS, CHANNELS]
-        ['10.250.140.244:10100', [1, 0]], # MACHINE 0
-        ['10.250.78.122:20100', [2, 0]], # MACHINE 1
-        ['10.250.148.84:30100', [3, 0]], # MACHINE 2
+        ['10.250.140.244:10100', [1, 0]],  # MACHINE 0
+        ['10.250.78.122:20100', [2, 0]],   # MACHINE 1
+        ['10.250.148.84:30100', [3, 0]],   # MACHINE 2
     ]
 
     INT_MAX_LEN = 1 << 64
@@ -37,11 +40,11 @@ class Config:
     PYGAME_DELAY = 0.001
 
     REMOTE_DELAY_SHORT = 0.5
-    REMOTE_DELAY_LONG  = 5.0
+    REMOTE_DELAY_LONG = 5.0
     REMOTE_DELAY_LONG_FREQUENCY = 5
 
 
 class UIConfig:
     SCREEN_HEIGHT = 640
     SCREEN_WIDTH = 640
-    fps=60
+    FPS = 60

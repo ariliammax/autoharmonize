@@ -90,7 +90,8 @@ class AllStreamer(Streamer):
         assert False
 
     def get_current_time(self):
-        current_times = [streamer.get_current_time() for streamer in self.streamers]
+        current_times = [streamer.get_current_time()
+                         for streamer in self.streamers]
         return sum(current_times) / len(current_times)
 
     def get_last_time(self):
@@ -101,7 +102,8 @@ class AllStreamer(Streamer):
         return "ALL"
 
     def get_total_time(self):
-        total_times = [streamer.get_total_time() for streamer in self.streamers]
+        total_times = [streamer.get_total_time()
+                       for streamer in self.streamers]
         return min(total_times)
 
     def get_volume(self):
@@ -173,7 +175,8 @@ class LocalMusicStreamer(Streamer):
         return pygame.mixer.Sound(file + "-" + chunk_str + ".mp3")
 
     def get_current_time(self):
-        inter_chunk_offset = (self.current_chunk_index - 1) * Config.CHANNELS[self.channel_id][2]
+        inter_chunk_offset = ((self.current_chunk_index - 1) *
+                              Config.CHANNELS[self.channel_id][2])
         intra_chunk_offset = self.current_chunk_timestamp
         realtime_offset = time() - self.current_chunk_realtime
         if not self.playing:
@@ -187,7 +190,8 @@ class LocalMusicStreamer(Streamer):
         return Config.CHANNELS[self.channel_id][0]
 
     def get_total_time(self):
-        return Config.CHANNELS[self.channel_id][1] * Config.CHANNELS[self.channel_id][2]
+        return (Config.CHANNELS[self.channel_id][1] *
+                Config.CHANNELS[self.channel_id][2])
 
     def get_volume(self):
         return self.volume
@@ -219,7 +223,11 @@ class LocalMusicStreamer(Streamer):
         sound = self.get_chunk(chunk)
         if sound is None:
             interval = Config.CHANNELS[self.channel_id][2]
-            self.schedule_seek(chunk if playing else chunk - 1, interval, playing)
+            self.schedule_seek(
+                chunk if playing else chunk - 1,
+                interval,
+                playing
+            )
         else:
             channel = pygame.mixer.Channel(self.channel_id)
             channel.set_endevent(pygame.USEREVENT + len(Config.CHANNELS))
@@ -275,7 +283,7 @@ class RemoteMusicStream():
             try:
                 connection, _ = s.accept()
                 Thread(target=self.recv, args=[connection]).start()
-            except:
+            except Exception:
                 pass
 
     def recv(self, connection):
@@ -286,13 +294,14 @@ class RemoteMusicStream():
                     break
                 request = RemoteStreamRequest.deserialize(request)
                 chunk = request.get_chunk()
-                if (chunk + self.machine_id) % Config.REMOTE_DELAY_LONG_FREQUENCY == 0:
+                if ((chunk + self.machine_id) %
+                        Config.REMOTE_DELAY_LONG_FREQUENCY == 0):
                     sleep(Config.REMOTE_DELAY_LONG)
                 else:
                     sleep(Config.REMOTE_DELAY_SHORT)
                 response = b"response"
                 connection.send(response)
-            except:
+            except Exception:
                 pass
 
     def __init__(self, machine_id):
@@ -311,7 +320,7 @@ class RemoteMusicStreamer(LocalMusicStreamer):
                 machine_address = tuple(machine_address)
                 s.connect(machine_address)
                 break
-            except:
+            except Exception:
                 pass
         while True:
             try:
@@ -329,11 +338,12 @@ class RemoteMusicStreamer(LocalMusicStreamer):
                 if len(response) == 0:
                     break
                 self.downloaded[chunk] = True
-            except:
+            except Exception:
                 pass
 
     def __init__(self, channel_id):
-        self.downloaded = [False for _ in range(Config.CHANNELS[channel_id][1] + 1)]
+        self.downloaded = [False
+                           for _ in range(Config.CHANNELS[channel_id][1] + 1)]
         self.downloaded[0] = True
         self.machine_id = None
         self.prioritized = 1

@@ -121,24 +121,31 @@ class Machine:
              if len(latest_events[c_idx]) > 0]
         [event.set_channel_state(
             ChannelState(
-                idx=event
-                    .get_channel_state().get_idx(),
-                last_timestamp=ui_manager
+                idx=event.get_channel_state().get_idx(),
+                last_timestamp=(
+                    ui_manager
                     .streamers[event.get_channel_state().get_idx()]
-                    .get_last_time(),
-                timestamp=ui_manager
+                    .get_last_time()
+                ),
+                timestamp=(
+                    ui_manager
                     .streamers[event.get_channel_state().get_idx()]
                     .get_current_time()
                     if event.get_event_code() != EventCode.SEEK.value else
-                    event.get_channel_state().get_timestamp(),
-                playing=ui_manager
+                    event.get_channel_state().get_timestamp()
+                ),
+                playing=(
+                    ui_manager
                     .streamers[event.get_channel_state().get_idx()]
-                    .is_playing(),
-                volume=ui_manager
+                    .is_playing()
+                ),
+                volume=(
+                    ui_manager
                     .streamers[event.get_channel_state().get_idx()]
                     .get_volume()
                     if event.get_event_code() != EventCode.VOLUME.value else
-                    event.get_channel_state().get_volume(),
+                    event.get_channel_state().get_volume()
+                )
             )
          ) for event in channel_events_states]
 

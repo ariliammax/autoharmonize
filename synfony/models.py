@@ -4,7 +4,7 @@
 from synfony.enums import OperationCode, EventCode
 from synfony.serialization import SerializationUtils
 from synfony.util import Model
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List
 
 
 # DATA MODELS
@@ -78,8 +78,7 @@ class BaseEvent(Model.model_with_fields(event_code=int)):
         class __impl_class__(
             BaseEvent.add_fields(
                 field_defaults=dict(list(field_defaults.items()) +
-                                    list(dict(event_code=
-                                              event_code.value)
+                                    list(dict(event_code=event_code.value)
                                          .items())),
                 field_deserializers=dict(list(field_deserializers.items()) +
                                          [('event_code',
@@ -132,7 +131,7 @@ class ChannelState(Model.model_with_fields(
 
         ordered_events = [event for event in channel_events_states]
         ordered_events.sort(
-            key=lambda event:-1 * event.get_channel_state().get_timestamp()
+            key=lambda event: -1 * event.get_channel_state().get_timestamp()
         )
 
         any_pause = len(
@@ -169,24 +168,30 @@ class ChannelState(Model.model_with_fields(
             vol_idxes = [0]
 
         return ChannelState(
-            idx=
+            idx=(
                 ordered_events[seek_idxes[0]].get_channel_state()
-                .get_idx(),
-            last_timestamp=
+                .get_idx()
+            ),
+            last_timestamp=(
                 ordered_events[seek_idxes[0]].get_channel_state()
                 .get_timestamp()
                 if any_seek or any_playing or any_pause else
                 ordered_events[seek_idxes[0]].get_channel_state()
-                .get_last_timestamp(),
-            timestamp=
+                .get_last_timestamp()
+            ),
+            timestamp=(
                 ordered_events[seek_idxes[0]].get_channel_state()
-                .get_timestamp(),
-            playing=
-                False if any_pause else (any_play or any_playing),
-            volume=
+                .get_timestamp()
+            ),
+            playing=(
+                False if any_pause else (any_play or any_playing)
+            ),
+            volume=(
                 ordered_events[vol_idxes[0]].get_channel_state()
                 .get_volume()
+            )
         )
+
 
 DEFAULT_CHANNEL_STATE = ChannelState(
     idx=0,
@@ -291,8 +296,8 @@ class BaseRequest(Model.model_with_fields(operation_code=int)):
         class __impl_class__(
             BaseRequest.add_fields(
                 field_defaults=dict(list(field_defaults.items()) +
-                                    list(dict(operation_code=
-                                              operation_code.value)
+                                    list(dict(operation_code=operation_code
+                                              .value)
                                          .items())),
                 field_deserializers=dict(list(field_deserializers.items()) +
                                          [('operation_code',

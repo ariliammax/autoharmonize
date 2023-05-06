@@ -21,7 +21,7 @@ import struct
 FLOAT_LEN_BYTES = 8
 # the number of bytes taken up in serializing an `int` using `chr`s
 INT_LEN_BYTES = int(log(Config.INT_MAX_LEN) / 8) + 1
-# the number of bytes taken up in serializing an `int` encoding a `list`'s `len`
+# the number of bytes  in serializing an `int` encoding a `list`'s `len`
 LIST_LEN_BYTES = int(log(Config.LIST_MAX_LEN) / 8) + 1
 # the number of bytes taken up in serializing an `int` encoding a `str`'s `len`
 STR_LEN_BYTES = int(log(Config.STR_MAX_LEN) / 8) + 1

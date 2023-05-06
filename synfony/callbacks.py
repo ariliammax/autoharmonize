@@ -3,7 +3,7 @@ from synfony.models import PauseEvent, PlayEvent, SeekEvent, VolumeEvent
 from synfony.models import ChannelState
 
 
-def playButtonTapped(channel_idx, event_queue, streamer):
+def did_tap_play_button(channel_idx, event_queue, streamer):
     channel_state = ChannelState(
         idx=channel_idx,
         last_timestamp=streamer.get_last_time(),
@@ -19,7 +19,7 @@ def playButtonTapped(channel_idx, event_queue, streamer):
         streamer.sync(channel_state)
 
 
-def didSeekTo(channel_idx, event_queue, seek_value, streamer):
+def did_seek_to(channel_idx, event_queue, seek_value, streamer):
     channel_state = ChannelState(
         idx=channel_idx,
         last_timestamp=streamer.get_last_time(),
@@ -32,7 +32,7 @@ def didSeekTo(channel_idx, event_queue, seek_value, streamer):
         streamer.sync(channel_state)
 
 
-def didChangeVolumeTo(channel_idx, event_queue, seek_value, streamer):
+def did_change_volume_to(channel_idx, event_queue, seek_value, streamer):
     channel_state = ChannelState(
         idx=channel_idx,
         last_timestamp=streamer.get_last_time(),
