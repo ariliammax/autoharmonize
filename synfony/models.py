@@ -159,9 +159,6 @@ class ChannelState(Model.model_with_fields(
         any_seek = len(seek_idxes) > 0
         if not any_seek and not any_playing:
             seek_idxes = [0]
-            ordered_events[0].get_channel_state().set_timestamp(
-                ordered_events[0].get_channel_state().get_last_timestamp()
-            )
         elif not any_seek:
             seek_idxes = [i for i, event in enumerate(ordered_events)
                           if event.get_channel_state().get_playing()]
@@ -187,6 +184,9 @@ class ChannelState(Model.model_with_fields(
             timestamp=(
                 ordered_events[seek_idxes[0]].get_channel_state()
                 .get_timestamp()
+                if any_seek or any_playing else
+                ordered_events[seek_idxes[0]].get_channel_state()
+                .get_last_timestamp()
             ),
             playing=(
                 False if any_pause else (any_play or any_playing)
