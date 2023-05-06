@@ -301,7 +301,7 @@ class RemoteMusicStream():
                     sleep(Config.REMOTE_DELAY_LONG)
                 else:
                     sleep(Config.REMOTE_DELAY_SHORT)
-                response = b"response"
+                response = b'1'
                 self.sockets.send(connection, response)
             except Exception:
                 pass

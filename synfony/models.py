@@ -10,15 +10,20 @@ from typing import Callable, Dict, List
 # DATA MODELS
 
 
-MachineAddress = Model.model_with_fields(
-    host=str,
-    idx=int,
-    port=int,
-    status=bool
-)
+class MachineAddress(
+    Model.model_with_fields(
+        host=str,
+        idx=int,
+        port=int,
+        status=bool
+    )
+):
+    pass
 
 
-class BaseEvent(Model.model_with_fields(event_code=int)):
+class BaseEvent(
+    Model.model_with_fields(event_code=int)
+):
     """the basic data model of the `Event`s. Like operations, we will have to
         "peek" at the event code to see how to properly deserialize.
     """
@@ -67,8 +72,8 @@ class BaseEvent(Model.model_with_fields(event_code=int)):
             field_defaults: Dict[str, object] = {},
             field_deserializers: Dict[str, Callable] = {},
             field_serializers: Dict[str, Callable] = {},
-            order_of_fields: List[str] = None,
             fields_list_nested: Dict[str, type] = {},
+            order_of_fields: List[str] = [],
             **new_fields: Dict[str, type]):
         """Creates a new `Model` which also uses an `event_code` field
             (but not the `peek_event_code` functionality, that is unique to
@@ -204,44 +209,66 @@ DEFAULT_CHANNEL_STATE = ChannelState(
 
 # there is a global consensus of the channel "state", but that may be
 # slightly modified on each machine (i.e. through mixing)
-MixedChannelState = ChannelState.add_fields(
-    muted=bool,
-)
+class MixedChannelState(
+    ChannelState.add_fields(
+        muted=bool
+    )
+):
+    pass
 
 
-NoneEvent = BaseEvent.add_fields_with_event_code(
-    channel_state=ChannelState,
-    event_code=EventCode.NONE
-)
-
-PauseEvent = BaseEvent.add_fields_with_event_code(
-    channel_state=ChannelState,
-    event_code=EventCode.PAUSE
-)
+class NoneEvent(
+    BaseEvent.add_fields_with_event_code(
+        channel_state=ChannelState,
+        event_code=EventCode.NONE
+    )
+):
+    pass
 
 
-PlayEvent = BaseEvent.add_fields_with_event_code(
-    channel_state=ChannelState,
-    event_code=EventCode.PLAY
-)
+class PauseEvent(
+    BaseEvent.add_fields_with_event_code(
+        channel_state=ChannelState,
+        event_code=EventCode.PAUSE
+    )
+):
+    pass
 
 
-SeekEvent = BaseEvent.add_fields_with_event_code(
-    channel_state=ChannelState,
-    event_code=EventCode.SEEK
-)
+class PlayEvent(
+    BaseEvent.add_fields_with_event_code(
+        channel_state=ChannelState,
+        event_code=EventCode.PLAY
+    )
+):
+    pass
 
 
-VolumeEvent = BaseEvent.add_fields_with_event_code(
-    channel_state=ChannelState,
-    event_code=EventCode.VOLUME
-)
+class SeekEvent(
+    BaseEvent.add_fields_with_event_code(
+        channel_state=ChannelState,
+        event_code=EventCode.SEEK
+    )
+):
+    pass
+
+
+class VolumeEvent(
+    BaseEvent.add_fields_with_event_code(
+        channel_state=ChannelState,
+        event_code=EventCode.VOLUME
+    )
+):
+    pass
 
 
 # OBJECT MODELS
 
+
 # these are the basic ones.
-class BaseRequest(Model.model_with_fields(operation_code=int)):
+class BaseRequest(
+    Model.model_with_fields(operation_code=int)
+):
     """A `Model` which has an `operation_code` field, and the ability to peek
         at the `operation_code` fields (so we can figure out which
         deserializers to actually use).
@@ -285,8 +312,8 @@ class BaseRequest(Model.model_with_fields(operation_code=int)):
             field_defaults: Dict[str, object] = {},
             field_deserializers: Dict[str, Callable] = {},
             field_serializers: Dict[str, Callable] = {},
-            order_of_fields: List[str] = None,
             fields_list_nested: Dict[str, type] = {},
+            order_of_fields: List[str] = [],
             **new_fields: Dict[str, type]):
         """Creates a new `Model` which also uses an `operation_code` field
             (but not the `peek_operation_code` functionality, that is unique to
@@ -317,22 +344,31 @@ class BaseRequest(Model.model_with_fields(operation_code=int)):
         return __impl_class__
 
 
-HeartbeatRequest = BaseRequest.add_fields_with_operation_code(
-    channel_events_states=list,
-    machine_addresses=list,
-    sent_timestamp=float,
-    operation_code=OperationCode.HEARTBEAT,
-    fields_list_nested=dict(
-        channel_events_states=BaseEvent,
-        machine_addresses=MachineAddress
+class HeartbeatRequest(
+    BaseRequest.add_fields_with_operation_code(
+        channel_events_states=list,
+        machine_addresses=list,
+        sent_timestamp=float,
+        operation_code=OperationCode.HEARTBEAT,
+        fields_list_nested=dict(
+            channel_events_states=BaseEvent,
+            machine_addresses=MachineAddress
+        )
     )
-)
+):
+    pass
 
 
-IdentityRequest = BaseRequest.add_fields_with_operation_code(
-    machine_address=MachineAddress,
-    operation_code=OperationCode.IDENTITY
-)
+class IdentityRequest(
+    BaseRequest.add_fields_with_operation_code(
+        machine_address=MachineAddress,
+        operation_code=OperationCode.IDENTITY
+    )
+):
+    pass
 
 
-RemoteStreamRequest = Model.add_fields(chunk=int)
+class RemoteStreamRequest(
+    Model.add_fields(chunk=int)
+):
+    pass

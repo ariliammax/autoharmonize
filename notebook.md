@@ -50,10 +50,10 @@ the data. We are (for now) neglecting the "streaming data" problem, that can
 be safely disentangled from the "synchronization" problem in this framework.
 
 There is a neat "reactive" protocol that would work for synchronizing these
-user events (it is basically logical clocks but with a state machine, where the
-consensus is based on a choice function that is deterministic and not just
-majority-rule), but that seems a lil risky to implement (according to some team
-members), so we are opting for the more standard "handshake" consensus.
+user events (it is basically logical clocks but with a state machine, where
+the consensus is based on a choice function that is deterministic and not just
+majority-rule), but that seems a lil risky to implement (according to some
+team members), so we are opting for the more standard "handshake" consensus.
 
 ... YADA YADA ...
 

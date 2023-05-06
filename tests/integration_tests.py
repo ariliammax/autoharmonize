@@ -1,22 +1,24 @@
-# test.py
+# integration_tests.py
 
 from synfony.config import Config as SConfig
+from synfony.sockets import BaseSockets
 
 import pytest
 
 
-# this is a "mock" of `synfony.config.Config` for the purpose of testing
 class Config(SConfig):
+    """this is a "mock" of `synfony.config.Config` for the purpose of testing
+    """
     MACHINES = [
-        'localhost:10000',           # MACHINE 0
-        'localhost:20000',           # MACHINE 1
-        'localhost:30000']           # MACHINE 2
+        'localhost:10000',         # MACHINE 0
+        'localhost:20000',         # MACHINE 1
+        'localhost:30000']         # MACHINE 2
 
     # [ADDRESS, CHANNELS]
     STREAMS = [
-        ['localhost:10100', [1, 0]],  # MACHINE 0
-        ['localhost:20100', [2, 0]],  # MACHINE 1
-        ['localhost:30100', [3, 0]],  # MACHINE 2
+        ['localhost:10100', [0]],  # MACHINE 0
+        ['localhost:20100', [0]],  # MACHINE 1
+        ['localhost:30100', [0]],  # MACHINE 2
     ]
 
 

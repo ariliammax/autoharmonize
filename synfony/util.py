@@ -8,9 +8,6 @@ from typing import Callable, Dict, List, Optional, Type
 import builtins
 
 
-...
-
-
 class Interface(object):
     """An abstract `interface` that will be used in e.g. `model_from_proto`
        to autogenerate the sort of useful code we would like.
@@ -208,11 +205,19 @@ class Model(object):
     def model_with_fields(field_defaults: Dict[str, object] = {},
                           field_deserializers: Dict[str, Callable] = {},
                           field_serializers: Dict[str, Callable] = {},
-                          order_of_fields: List[str] = None,
                           fields_list_nested: Dict[str, type] = {},
+                          order_of_fields: List[str] = [],
                           **fields: Dict[str, type]) -> type:
         """Create a new `Model` subclass with the given class attributes.
         """
+
+        # apparently we might accidentally make mutations to the default
+        # values! so any of these we'll create a local copy to work with first
+        field_defaults = {k: v for k, v in field_defaults.items()}
+        field_deserializers = {k: v for k, v in field_deserializers.items()}
+        field_serializers = {k: v for k, v in field_serializers.items()}
+        fields_list_nested = {k: v for k, v in fields_list_nested.items()}
+        order_of_fields = [v for v in order_of_fields]
 
         for name in fields:
             if name in Model._reserved_fields:
@@ -240,8 +245,8 @@ class Model(object):
 
             if serialize is None or deserialize is None:
                 raise ValueError(f'Field {name!s} requires a ' +
-                                 ('(de)' if deserialize is None
-                                  and serialize is None else
+                                 ('(de)' if (deserialize is None and
+                                             serialize is None) else
                                   'de' if deserialize is None else '') +
                                  'serializer.')
 
@@ -259,7 +264,7 @@ class Model(object):
 
             _field_serializers = {k: v for k, v in field_serializers.items()}
 
-            _order_of_fields = order
+            _order_of_fields = [f for f in order]
 
             _fields_list_nested = {k: v for k, v in fields_list_nested.items()}
 
@@ -341,23 +346,31 @@ class Model(object):
                    field_defaults: Dict[str, object] = {},
                    field_deserializers: Dict[str, Callable] = {},
                    field_serializers: Dict[str, Callable] = {},
-                   order_of_fields: List[str] = None,
                    fields_list_nested: Dict[str, type] = {},
+                   order_of_fields: List[str] = [],
                    **new_fields: Dict[str, type]) -> type:
         """The same as `model_with_fields`, but using the initial state
             of whatever `Model` subclass it's called from, adding on.
         """
         return Model.model_with_fields(
-            field_defaults=dict(list(cls._field_defaults.items()) +
+            field_defaults=dict(list(getattr(cls,
+                                             '_field_defaults',
+                                             {}).items()) +
                                 list(field_defaults.items())),
-            field_deserializers=dict(list(cls._field_deserializers.items()) +
+            field_deserializers=dict(list(getattr(cls,
+                                                  '_field_deserializers',
+                                                  {}).items()) +
                                      list(field_deserializers.items())),
-            field_serializers=dict(list(cls._field_serializers.items()) +
+            field_serializers=dict(list(getattr(cls,
+                                                '_field_serializers',
+                                                {}).items()) +
                                    list(field_serializers.items())),
-            fields_list_nested=dict(list(cls._fields_list_nested.items()) +
+            fields_list_nested=dict(list(getattr(cls,
+                                                 '_fields_list_nested',
+                                                 {}).items()) +
                                     list(fields_list_nested.items())),
             order_of_fields=order_of_fields,
-            **dict(list(cls._fields.items()) +
+            **dict(list(getattr(cls, '_fields', {}).items()) +
                    list(new_fields.items()))).add_getters_setters()
 
     @classmethod
@@ -365,8 +378,8 @@ class Model(object):
                     field_defaults: Dict[str, object] = {},
                     field_deserializers: Dict[str, Callable] = {},
                     field_serializers: Dict[str, Callable] = {},
-                    order_of_fields: List[str] = None,
                     fields_list_nested: Dict[str, type] = {},
+                    order_of_fields: List[str] = [],
                     **rm_fields: Dict[str, type]) -> type:
         """The same as `model_with_fields`, but using the initial state
             of whatever `Model` subclass it's called from, removing from.
@@ -376,15 +389,23 @@ class Model(object):
                 raise ValueError(f'Cannot omit field \'{fname!s}\'; '
                                  f'it is not a field of {cls!s}.')
         return Model.model_with_fields(
-            field_defaults=dict(list(cls._field_defaults.items()) +
+            field_defaults=dict(list(getattr(cls,
+                                             '_field_defaults',
+                                             {}).items()) +
                                 list(field_defaults.items())),
-            field_deserializers=dict(list(cls._field_deserializers.items()) +
+            field_deserializers=dict(list(getattr(cls,
+                                                  '_field_deserializers',
+                                                  {}).items()) +
                                      list(field_deserializers.items())),
-            field_serializers=dict(list(cls._field_serializers.items()) +
+            field_serializers=dict(list(getattr(cls,
+                                                '_field_serializers',
+                                                {}).items()) +
                                    list(field_serializers.items())),
-            order_of_fields=order_of_fields,
-            fields_list_nested=dict(list(cls._fields_list_nested.items()) +
+            fields_list_nested=dict(list(getattr(cls,
+                                                 '_fields_list_nested',
+                                                 {}).items()) +
                                     list(fields_list_nested.items())),
+            order_of_fields=order_of_fields,
             **{n: t for n, t in cls._fields.items()
                if n not in rm_fields}).add_getters_setters()
 
