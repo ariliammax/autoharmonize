@@ -2,9 +2,9 @@
 # in synfony
 
 from abc import ABC, abstractmethod
-from socket import AF_INET, SOCK_STREAM, socket
 from synfony.config import Config
-from synfony.models import ChannelState, RemoteStreamRequest
+from synfony.models import ChannelState, MachineAddress, RemoteStreamRequest
+from synfony.sockets import TCPSockets
 from threading import Thread, Timer
 from time import sleep, time
 
@@ -271,17 +271,19 @@ class LocalMusicStreamer(Streamer):
 
 
 class RemoteMusicStream():
+    sockets = TCPSockets
+
     def accept(self):
-        s = socket(AF_INET, SOCK_STREAM)
-        s.settimeout(None)
-        machine_address = Config.STREAMS[self.machine_id][0].split(":")
-        machine_address[1] = int(machine_address[1])
-        machine_address = tuple(machine_address)
-        s.bind(machine_address)
-        s.listen()
+        host, port = tuple(Config.STREAMS[self.machine_id][0].split(":"))
+        machine_address = MachineAddress(host=host, port=int(port))
+        s = self.sockets.start_socket(
+            machine_address=machine_address,
+            timeout=None,
+            bind=True
+        )
         while True:
             try:
-                connection, _ = s.accept()
+                connection, _ = self.sockets.accept(s)
                 Thread(target=self.recv, args=[connection]).start()
             except Exception:
                 pass
@@ -289,7 +291,7 @@ class RemoteMusicStream():
     def recv(self, connection):
         while True:
             try:
-                request = connection.recv(Config.PACKET_MAX_LEN)
+                request = self.sockets.recv(connection)
                 if len(request) == 0:
                     break
                 request = RemoteStreamRequest.deserialize(request)
@@ -300,7 +302,7 @@ class RemoteMusicStream():
                 else:
                     sleep(Config.REMOTE_DELAY_SHORT)
                 response = b"response"
-                connection.send(response)
+                self.sockets.send(connection, response)
             except Exception:
                 pass
 
@@ -310,15 +312,20 @@ class RemoteMusicStream():
 
 
 class RemoteMusicStreamer(LocalMusicStreamer):
+    sockets = TCPSockets
+
     def connect(self):
         while True:
             try:
-                s = socket(AF_INET, SOCK_STREAM)
-                s.settimeout(None)
-                machine_address = Config.STREAMS[self.machine_id][0].split(":")
-                machine_address[1] = int(machine_address[1])
-                machine_address = tuple(machine_address)
-                s.connect(machine_address)
+                host, port = tuple(
+                    Config.STREAMS[self.machine_id][0].split(":")
+                )
+                machine_address = MachineAddress(host=host, port=int(port))
+                s = self.sockets.start_socket(
+                    machine_address=machine_address,
+                    timeout=None,
+                    connect=True
+                )
                 break
             except Exception:
                 pass
@@ -333,8 +340,8 @@ class RemoteMusicStreamer(LocalMusicStreamer):
                         chunk = 1
                 request = RemoteStreamRequest(chunk=chunk)
                 request = request.serialize()
-                s.sendall(request)
-                response = s.recv(Config.PACKET_MAX_LEN)
+                self.sockets.sendall(s, request)
+                response = self.sockets.recv(s)
                 if len(response) == 0:
                     break
                 self.downloaded[chunk] = True

@@ -1,11 +1,11 @@
 # machine.py
 # in synfony
 
-from socket import AF_INET, SHUT_RDWR, SOCK_STREAM, socket
 from synfony.config import Config
 from synfony.enums import EventCode, OperationCode
 from synfony.models import BaseRequest, HeartbeatRequest, IdentityRequest
 from synfony.models import ChannelState,  MachineAddress
+from synfony.sockets import TCPSockets
 from synfony.ui import UI
 from threading import Thread
 from typing import Callable, List
@@ -19,11 +19,13 @@ class Machine:
 
     _lock = threading.Lock()
 
+    sockets = TCPSockets
+
     @classmethod
     def accept_clients(cls,
                        idx,
                        machine_addresses,
-                       s: socket,
+                       s,
                        machine_message_queues):
         """Called when the initial handshake between two machines begins.
 
@@ -35,10 +37,10 @@ class Machine:
         while True:
             try:
                 # 1 - accept connection
-                connection, _ = s.accept()
+                connection, _ = cls.sockets.accept(s)
 
                 # 2 - `IdentityRequest`
-                request_data = connection.recv(Config.PACKET_MAX_LEN)
+                request_data = cls.sockets.recv(connection)
                 if (BaseRequest.peek_operation_code(request_data) !=
                         OperationCode.IDENTITY):
                     continue
@@ -69,7 +71,7 @@ class Machine:
         """
         while True:
             try:
-                request_data = connection.recv(Config.PACKET_MAX_LEN)
+                request_data = cls.sockets.recv(connection)
                 if (BaseRequest.peek_operation_code(request_data) !=
                         OperationCode.HEARTBEAT):
                     continue
@@ -82,7 +84,7 @@ class Machine:
     @classmethod
     def metronome(cls,
                   my_idx: int,
-                  sockets: List[socket],
+                  sockets,
                   machine_addresses: List[MachineAddress],
                   ui_manager: UI,
                   machine_message_queues: List[HeartbeatRequest],
@@ -160,11 +162,11 @@ class Machine:
         request_data = request.serialize()
 
         # 1 - send to all
-        def impl_send_state(s: socket, i: int, request_data: bytes):
+        def impl_send_state(s, i: int, request_data: bytes):
             status = False
             while time.time() - start_t < Config.HEARTBEAT_TIMEOUT:
                 try:
-                    s.sendall(request_data)
+                    cls.sockets.sendall(s, request_data)
                     status = True
                     break
                 except Exception:
@@ -243,15 +245,15 @@ class Machine:
         )
 
     @classmethod
-    def handler(cls, e, s: socket):
+    def handler(cls, e, s):
         """Handle any errors that come up.
         """
         try:
-            s.shutdown(SHUT_RDWR)
+            cls.sockets.shutdown(s)
         except Exception:
             pass
         finally:
-            s.close()
+            cls.sockets.close(s)
         if e is not None:
             raise e
 
@@ -273,13 +275,11 @@ class Machine:
                        ui_manager: UI):
             try:
                 machine_address = machine_addresses[idx]
-                s = socket(AF_INET, SOCK_STREAM)
-                s.bind(
-                    (machine_address.get_host(),
-                     machine_address.get_port())
+                s = cls.sockets.start_socket(
+                    machine_address=machine_address,
+                    timeout=None,
+                    bind=True
                 )
-                s.settimeout(None)  # infinite, so blocking `recv`s
-                s.listen()
 
                 sockets = [None for _ in machine_addresses]
 
@@ -290,15 +290,13 @@ class Machine:
                     else:
                         while True:
                             try:
-                                other_socket = socket(AF_INET, SOCK_STREAM)
-                                other_socket.settimeout(
-                                    Config.HANDSHAKE_TIMEOUT
+                                other_socket = cls.sockets.start_socket(
+                                    machine_address=other_machine_address,
+                                    timeout=Config.HANDSHAKE_TIMEOUT,
+                                    connect=True
                                 )
-                                other_socket.connect(
-                                    (other_machine_address.get_host(),
-                                     other_machine_address.get_port())
-                                )
-                                other_socket.sendall(
+                                cls.sockets.sendall(
+                                    other_socket,
                                     IdentityRequest(
                                         machine_address=machine_address
                                     ).serialize()
