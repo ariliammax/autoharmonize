@@ -8,10 +8,10 @@ from synfony.callbacks import did_change_volume_to, \
 from synfony.config import Config, UIConfig
 from synfony.streamer import (
     AllStreamer,
+    BaseStreamer,
     LocalMusicStreamer,
     RemoteMusicStream,
-    RemoteMusicStreamer,
-    Streamer
+    RemoteMusicStreamer
 )
 
 import math
@@ -194,7 +194,7 @@ class Picker:
         self.ui.objects.append(self)
 
     def _decrement(self, **kwargs):
-        total_num_channels = Streamer.get_num_channels() + 1
+        total_num_channels = BaseStreamer.get_num_channels() + 1
         self.value = (self.value - 1) % total_num_channels
         self.ui.channel = (self.ui.channel - 1) % total_num_channels
 
@@ -212,7 +212,7 @@ class Picker:
             self.on_change_function(self.value)
 
     def _increment(self, **kwargs):
-        total_num_channels = Streamer.get_num_channels() + 1
+        total_num_channels = BaseStreamer.get_num_channels() + 1
         self.value = (self.value + 1) % total_num_channels
         self.ui.channel = (self.ui.channel + 1) % total_num_channels
 
@@ -440,7 +440,7 @@ class SeekSlider():
 
 
 class UI(BaseUI):
-    channel = Streamer.get_num_channels()
+    channel = BaseStreamer.get_num_channels()
     event_queue = []
     fps_clock = pygame.time.Clock()
     objects = []
@@ -448,7 +448,7 @@ class UI(BaseUI):
         (UIConfig.SCREEN_WIDTH, UIConfig.SCREEN_HEIGHT)
     )
     streamers = []
-    is_loading = [False for _ in range(Streamer.get_num_channels())]
+    is_loading = [False for _ in range(BaseStreamer.get_num_channels())]
 
     def init(self, machine_id):
         self.machine_id = machine_id
@@ -456,13 +456,13 @@ class UI(BaseUI):
         pygame.display.set_caption('AUTOHARMONIZER (' + str(machine_id) + ')')
 
         RemoteMusicStream(machine_id)
-        for i in range(Streamer.get_num_channels()):
+        for i in range(BaseStreamer.get_num_channels()):
             if i in Config.STREAMS[self.machine_id][1]:
                 self.streamers.append(LocalMusicStreamer(i))
             else:
                 self.streamers.append(RemoteMusicStreamer(i))
         self.streamers.append(AllStreamer(list(self.streamers)))
-        Streamer.init()
+        BaseStreamer.init()
 
         Loader(self, UIConfig.SCREEN_WIDTH / 2 - 25, 50, 50, 0.1)
 
@@ -474,7 +474,7 @@ class UI(BaseUI):
             50,
             self.channel,
             0,
-            Streamer.get_num_channels(),
+            BaseStreamer.get_num_channels(),
             self.streamers,
             None
         )
@@ -521,7 +521,7 @@ class UI(BaseUI):
             self.screen.fill((0, 0, 0))
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    Streamer.shutdown()
+                    BaseStreamer.shutdown()
                     pygame.quit()
                     exit()
                 else:
@@ -545,7 +545,7 @@ class UI(BaseUI):
                 return str(int(volume * 100))
 
     def get_is_loading(self):
-        if (self.channel == Streamer.get_num_channels()):
+        if (self.channel == BaseStreamer.get_num_channels()):
             # ALL Channel
             return (any(self.is_loading) or
                     self.streamers[self.channel].is_seeking())
@@ -554,15 +554,15 @@ class UI(BaseUI):
                     self.streamers[self.channel].is_seeking())
 
     def start_loading(self):
-        if (self.channel == Streamer.get_num_channels()):
+        if (self.channel == BaseStreamer.get_num_channels()):
             self.is_loading = [True
-                               for _ in range(Streamer.get_num_channels())]
+                               for _ in range(BaseStreamer.get_num_channels())]
         else:
             self.is_loading[self.channel] = True
 
     def stop_loading(self):
-        if (self.channel == Streamer.get_num_channels()):
+        if (self.channel == BaseStreamer.get_num_channels()):
             self.is_loading = [False
-                               for _ in range(Streamer.get_num_channels())]
+                               for _ in range(BaseStreamer.get_num_channels())]
         else:
             self.is_loading[self.channel] = False
