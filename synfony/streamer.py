@@ -11,7 +11,7 @@ from time import sleep, time
 import pygame
 
 
-class Streamer(ABC):
+class BaseStreamer(ABC):
     def __init__(self, channel_id):
         self.channel_id = channel_id
 
@@ -77,7 +77,7 @@ class Streamer(ABC):
         pygame.mixer.quit()
 
 
-class AllStreamer(Streamer):
+class AllStreamer(BaseStreamer):
     def __init__(self, streamers):
         super().__init__(-1)
         self.streamers = streamers
@@ -127,7 +127,7 @@ class AllStreamer(Streamer):
             streamer.sync(state)
 
 
-class LocalMusicStreamer(Streamer):
+class LocalMusicStreamer(BaseStreamer):
     def __init__(self, channel_id):
         super().__init__(channel_id)
         self.current_chunk_index = 1

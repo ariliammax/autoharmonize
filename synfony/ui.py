@@ -1,6 +1,7 @@
 # callbacks.py
 # in synfony
 
+from abc import ABC, abstractmethod
 from synfony.callbacks import did_change_volume_to, \
                               did_tap_play_button, \
                               did_seek_to
@@ -15,6 +16,24 @@ from synfony.streamer import (
 
 import math
 import pygame
+
+
+class BaseUI(ABC):
+    def __init__(self):
+        self.streamers = []
+        self.event_queue = []
+
+    @abstractmethod
+    def init(machine_id):
+        pass
+
+    @abstractmethod
+    def start_loading():
+        pass
+
+    @abstractmethod
+    def stop_loading():
+        pass
 
 
 class Button():
@@ -420,7 +439,7 @@ class SeekSlider():
         self.ui.screen.blit(self.right_label_surface, self.right_label_rect)
 
 
-class UI():
+class UI(BaseUI):
     channel = Streamer.get_num_channels()
     event_queue = []
     fps_clock = pygame.time.Clock()
