@@ -14,15 +14,15 @@ class Config:
     ]
 
     MACHINES = [
-        'localhost:10000',                      # MACHINE 0
-        'localhost:20000',                      # MACHINE 1
-        'localhost:30000']                      # MACHINE 2
+        '10.250.140.244:10000',                      # MACHINE 0
+        '10.250.78.122:20000',                      # MACHINE 1
+        '10.250.148.84:30000']                      # MACHINE 2
 
     # [ADDRESS, CHANNELS]
     STREAMS = [
-        ['localhost:10100', [1, 0]],            # MACHINE 0
-        ['localhost:20100', [2, 0]],            # MACHINE 1
-        ['localhost:30100', [3, 0]],            # MACHINE 2
+        ['10.250.140.244:10100', [1, 0]],            # MACHINE 0
+        ['10.250.78.122:20100', [2, 0]],            # MACHINE 1
+        ['10.250.148.84:30100', [3, 0]],            # MACHINE 2
     ]
 
     INT_MAX_LEN = 1 << 64
