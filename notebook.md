@@ -6,7 +6,7 @@ This document contains a few random bits of information.
 It may be debugging information, designs, or general nonsense that happens
 during development.
 
-This isn't the "final writeup" of the project... that will come in time.
+This isn't the "final writeup" of the project... that is in [paper/](paper/).
 
 ## Design
 
